@@ -2,7 +2,7 @@ import polars as pl
 from datetime import datetime
 from datetime import date
 
-def date_format(col: str,output_date_name = "output_date_name"):
+def date_format(col: str):
     """ Format Dates
 
     Convert string dates into a yyyy-mm-dd format. 
@@ -81,7 +81,7 @@ def date_format(col: str,output_date_name = "output_date_name"):
             pl.col(col).str.strptime(pl.Date, "%B %d, %Y", strict=False),
             # if someone sends an excel date we'll just reject it and call the cops on them
 
-        ).alias(output_date_name)
+        )
         
 
 def save_raw_values(df_inp: pl.DataFrame, primary_key_col: str):
