@@ -3,7 +3,6 @@ from polars.testing import assert_frame_equal as pl_assert_frame_equal
 import pytest
 from wadoh_raccoon.utils import helpers
 
-
 @pytest.fixture
 def get_df():
     """

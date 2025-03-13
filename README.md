@@ -30,7 +30,7 @@ create a script called `main.py` in your folder and run this code:
 
 ```python
 
-from test_project import helpers
+from wadoh_raccoon.utils import helpers
 import polars as pl
 
 
