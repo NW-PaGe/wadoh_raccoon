@@ -1,0 +1,83 @@
+---
+# title: "COVID-19 Lineages"
+# description: Documentation for pulling COVID-19 lineages from the CDC
+format: 
+  html: 
+    number-sections: false
+    title-block-banner: false
+    mainfont: Manrope
+    toc: false
+---
+
+::: container
+::: content
+<h1 class="css-qp8v3">
+
+::: css-nzw60t
+NORTHWEST PATHOGEN GENOMICS CENTER OF EXCELLENCE
+:::
+
+respnet subtyping linkage
+
+</h1>
+
+This site documents the Data Integration and Quality Assurance team's (DIQA) subtyping metadata pipeline. Here you can find onboarding and installation guides and documentation on our functions and scripts. 
+
+<a href="#collapseQuickstart" class="button">Get started</a>
+
+<!-- {{< bi github size=2em href="https://github.com/NW-PaGe/standards" >}} -->
+:::
+
+::: image
+![](_extensions/edenian-prince/nwpage/nw_page_tree_logo.png){width="250"}
+:::
+:::
+
+<br> <br> <br>
+
+::: {#collapseQuickstart .column-page}
+::: {.column .box .green width="25%"}
+
+### [User Guides](guides/index.qmd)
+
+<a href="guides/index.qmd" class="card-link">
+
+{{< bi house-down size=4em >}}
+
+</a>
+
+:::
+
+::: {.column .box .cyan width="25%"}
+
+### [Code Reference](reference/index.qmd)
+
+<a href="reference/index.qmd" class="card-link">
+
+{{< bi file-earmark-code size=4em >}}
+
+</a>
+
+:::
+
+::: {.column width="25%" .box .blue}
+
+<!-- ### Articles
+
+{{< bi journal-richtext size=4em >}} 
+
+<a href="ref/index.qmd"> </a> -->
+
+### [Articles](articles/index.qmd)
+
+<a href="articles/index.qmd" class="card-link">
+
+{{< bi journal-richtext size=4em >}} 
+
+</a>
+
+:::
+
+:::
+
+<br>

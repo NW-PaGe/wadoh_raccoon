@@ -1,0 +1,95 @@
+project:
+  type: website
+
+# tell quarto to read the generated sidebar
+metadata-files:
+  - _sidebar.yml
+
+
+quartodoc:
+  # the name used to import the package you want to create reference docs for
+  package: wadoh_raccoon
+  # options:
+  #   include_private: true
+  dir: reference
+  # dir: src/subtype_link
+  # source_dir: ../src/subtype_link
+  source_dir: ../
+  # out_index: reference/_api_index.qmd
+
+  # write sidebar data to this file
+  sidebar: _sidebar.yml
+
+# if you want to document files that are not a package, read this:
+  # https://machow.github.io/quartodoc/get-started/basic-content.html#documenting-source-files-that-are-not-a-package
+  sections:
+
+    - title: Functions
+      desc: main scripts that run the process
+      package: src.wadoh_raccoon.utils
+      contents:
+        - helpers
+
+website:
+  title: wadoh_raccoon
+  description: "Python package for transforming and linking pathogen sequencing/subtyping metadata"
+  search: true
+  repo-url: https://github.com/NW-PaGe/wadoh_raccoon
+  repo-actions: [source, edit, issue]
+  navbar:
+    left:
+      - text: "Guides"
+        file: guides/index.qmd
+      - text: "Reference"
+        file: reference/index.qmd
+      - text: "Articles"
+        file: articles/index.qmd
+    right:
+      - icon: github
+        href: https://github.com/NW-PaGe/wadoh_raccoon
+        aria-label: GitHub
+      - icon: file-richtext
+        href: https://nwpage.org/
+        aria-label: NW-PaGe
+      - icon: file-earmark-pdf-fill
+        href: https://github.com/NW-PaGe/standards/blob/main/nw-page-policies.pdf
+        aria-label: NW-PaGe PDF
+  sidebar: 
+    - id: guides
+      collapse-level: 2
+      contents: 
+        - section: "Onboarding"
+          href: guides/index.qmd
+          contents:
+            - guides/onboarding.qmd
+            - guides/desk_manual.qmd
+        - section: "Guides"
+          href: guides/index.qmd
+          contents:
+            - guides/overview.qmd
+        # - text: "Home"
+        #   file: index.qmd
+        # - text: "User Guide"
+        #   file: guides/index.qmd
+        # - text: "Onboarding"
+        #   file: guides/onboarding.qmd
+    - id: articles
+      collapse-level: 2
+      contents: 
+        - section: "Articles"
+          contents: 
+            - articles/index.qmd
+format:
+  # nwpage-html:
+  #   toc: true
+  #   theme: assets/custom.scss
+  html:
+    toc: true
+    theme: styles.scss
+    grid:
+      sidebar-width: 300px
+      body-width: 900px
+      margin-width: 300px
+      gutter-width: 1.5rem
+execute: 
+  freeze: auto

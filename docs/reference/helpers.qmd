@@ -1,0 +1,122 @@
+# helpers { #src.wadoh_raccoon.utils.helpers }
+
+`wadoh_raccoon.utils.helpers`
+
+
+
+## Functions
+
+| Name | Description |
+| --- | --- |
+| [date_format](#src.wadoh_raccoon.utils.helpers.date_format) | Format Dates |
+| [save_raw_values](#src.wadoh_raccoon.utils.helpers.save_raw_values) | save raw values |
+
+### date_format { #src.wadoh_raccoon.utils.helpers.date_format }
+
+```python
+wadoh_raccoon.utils.helpers.date_format(col)
+```
+
+Format Dates
+
+Convert string dates into a yyyy-mm-dd format. 
+The function uses pl.coalesce to try to process different formats.
+For example, it will first try to convert m/d/y, and then if that doesn't work it will try d/m/y.
+It's not perfect, but if someone messes up the date it's their fault.
+
+**Note: it won't attempt to convert excel dates. If someone sends us excel dates we will file a lawsuit.**
+
+#### Usage {.doc-section .doc-section-usage}
+
+To be applied to a string date column.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name   | Type   | Description                     | Default    |
+|--------|--------|---------------------------------|------------|
+| col    | str    | a string column that has a date | _required_ |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name        | Type   | Description   |
+|-------------|--------|---------------|
+| output_date | date   | a date column |
+
+#### Examples {.doc-section .doc-section-examples}
+
+```{python}
+import polars as pl
+from wadoh_raccoon.utils import helpers
+
+
+df = pl.DataFrame({
+    "dates": [
+        "2024-10-30",     # ISO format
+        "30/10/2024",     # European format
+        "10/20/2024",     # US format
+        "10-30-2024",     # US format
+        "October 30, 2024",  # Full month name format,
+        "45496",           # an excel date LOL
+        "2022-12-27 08:26:49"
+    ]
+})
+
+print(
+    df
+    .with_columns(
+        new_date=helpers.date_format('dates')
+    )
+)
+
+```
+
+### save_raw_values { #src.wadoh_raccoon.utils.helpers.save_raw_values }
+
+```python
+wadoh_raccoon.utils.helpers.save_raw_values(df_inp, primary_key_col)
+```
+
+save raw values
+
+#### Usage {.doc-section .doc-section-usage}
+
+Converts a polars dataframe into a dataframe with all columns in a struct column.
+It's good for saving raw outputs of data.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name            | Type         | Description                                                           | Default    |
+|-----------------|--------------|-----------------------------------------------------------------------|------------|
+| df_inp          | pl.DataFrame | a polars dataframe                                                    | _required_ |
+| primary_key_col | str          | column name for the primary key (submission key, not person/case key) | _required_ |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name   | Type         | Description   |
+|--------|--------------|---------------|
+| df     | pl.DataFrame | a dataframe   |
+
+#### Examples {.doc-section .doc-section-examples}
+
+```{python}
+import polars as pl
+from wadoh_raccoon.utils import helpers
+
+data = pl.DataFrame({
+    "lab_name": ["PHL", "MFT", "ELR","PHL"],
+    "first_name": ["Alice", "Bob", "Charlie", "Charlie"],
+    "last_name": ["Smith", "Johnson", "Williams", "Williams"],
+    "WA_ID": [1,2,4,4]
+})
+
+received_submissions_df = (
+        helpers.save_raw_values(df_inp=data,primary_key_col="WA_ID")
+)
+
+print(data)
+
+```
+
+```{python}
+print(received_submissions_df)
+```
