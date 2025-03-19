@@ -52,9 +52,7 @@ $link-decoration: underline !default;
 // fonts
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 
-@import url("https://fonts.googleapis.com/css2?family=Host+Grotesk:ital,wght@0,300..800;1,300..800&display=swap");
-
-@import url("https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&family=IBM+Plex+Serif:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=Manrope:wght@200..800&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap");
 
 @import url('https://rsms.me/inter/inter.css');
 html { font-family: 'Inter', sans-serif; }
@@ -64,10 +62,15 @@ html { font-family: 'Inter', sans-serif; }
 
 /*-- scss:rules --*/
 
+// :root {
+//   --bs-body-font-family: inter;
+//   --bs-body-font-size: 21px;
+// }
+
 :root {
-  --bs-body-font-family: inter;
-  --bs-body-font-size: 21px;
-}
+    --bs-body-font-family: 'Atkinson Hyperlegible';
+    --bs-body-font-size: 21px;
+  }
 
 .sidebar-item-text {
 	font-size: 17px;
@@ -84,35 +87,98 @@ html { font-family: 'Inter', sans-serif; }
 // 	color: #fdfdfd;
 // }
 
+/* Navbar Background */
 .navbar {
-	background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-	background-size: 200% 100%;
-	animation: gradient 15s ease infinite;
-}
+    position: relative;
+    background: linear-gradient(-90deg, rgb(9, 19, 105), #23a6d5, #23d5ab);
+    background-size: 200% 100%;
+    animation: gradient 15s ease alternate infinite;
+    overflow: hidden; /* Prevent blobs from overflowing */
+    z-index: 2;
+  }
+  
+  /* Blob Animation */
+  .navbar::before,
+  .navbar::after {
+    content: "";
+    position: absolute;
+    background: linear-gradient(30deg, #23a6d5, rgb(9, 19, 105)); /* Same gradient as navbar */
+    filter: blur(70px) brightness(1.5);
+    border-radius: 25px;
+    animation: blob 8s alternate infinite cubic-bezier(0.6, -0.28, 0.735, 0.045);
+    transform-origin: 60%;
+    z-index: 1; /* Make sure blobs stay behind the content */
+    pointer-events: none; /* Make blobs not block interactions with navbar items */
+  }
+  
+  /* Before Blob */
+  .navbar::before {
+    left: 20%;
+    top: 10%;
+    width: 70%;
+    height: 50%;
+    animation: blob 8s alternate infinite cubic-bezier(0.6, -0.28, 0.735, 0.045);
+    transform-origin: 60%;
+  }
+  
+  /* After Blob */
+  .navbar::after {
+    left: 40%;
+    top: 30%;
+    width: 70%;
+    height: 80%;
+    animation: blob 10s alternate infinite cubic-bezier(0.215, 0.61, 0.355, 1) reverse;
+    transform-origin: 60%;
+  }
+  
+  /* Navbar Links and Hover Effects */
+  #navbarCollapse > ul.navbar-nav.navbar-nav-scroll.me-auto > li > a:hover {
+    background-color: rgb(240, 112, 0);
+    color: white;
+    border-radius: 5px;
+  }
+  
+  #navbarCollapse > ul.navbar-nav.navbar-nav-scroll.me-auto > li > a {
+    color: white;
+    font-weight: bold;
+    z-index: 3; /* Ensure navbar links are above blobs */
+  }
+  
+  /* Blob Keyframe Animation */
+  @keyframes blob {
+    0% {
+      transform: translate(0, 0) rotate(0deg);
+    }
+    30% {
+      rotate: 10deg;
+    }
+    50% {
+      transform: translate(300px, 390px) scale(1.1);
+    }
+    80% {
+      rotate: 20deg;
+    }
+  }
+  
+  /* Gradient Animation */
+  @keyframes gradient {
+    0% {
+      background-position: 0% 0%;
+    }
+    100% {
+      background-position: 100% 100%;
+    }
+  }
 
-#navbarCollapse > ul.navbar-nav.navbar-nav-scroll.me-auto > li > a:hover {
-  background-color: rgb(240, 112, 0);
-  color: white;
-  border-radius: 5px;
+// for the right side links in the navbar
+#navbarCollapse > ul.navbar-nav.navbar-nav-scroll.ms-auto > li > a {
+    background-color: white;
+    border-radius: 3px;
+    height: 100%;
+    vertical-align: middle;
+    color: black;
+    z-index: 3; /* Ensure navbar links are above blobs */
 }
-
-#navbarCollapse > ul.navbar-nav.navbar-nav-scroll.me-auto > li > a {
-  color: white;
-  font-weight: bold;
-}
-
-@keyframes gradient {
-	0% {
-		background-position: 0% 50%;
-	}
-	50% {
-		background-position: 100% 50%;
-	}
-	100% {
-		background-position: 0% 50%;
-	}
-}
-
 
 /* sidebar formatting */
 
@@ -216,7 +282,7 @@ td:first-child a {
 // splash page
 // navbar title and text
 .navbar-brand {
-	font-family: "Hanken Grotesk";
+	font-family: inter;
 	font-weight: 900;
 	font-size: 30px;
 	color: #c3deea;
@@ -243,7 +309,7 @@ td:first-child a {
 
 .css-qp8v3 {
   font-weight: 500;
-  font-size: 4em;
+  font-size: 3.5em;
   line-height: 1.15;
   letter-spacing: -0.03;
   margin-bottom: 24px;
@@ -257,6 +323,16 @@ td:first-child a {
   text-transform: uppercase;
   margin-bottom: 32px;
 }
+
+.title-header {
+    font-size: 2em;
+    // line-height: 1.4;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    // text-transform: uppercase;
+    // margin-bottom: 32px;
+    font-family: inter;
+  }
 
 
 .splash-page {

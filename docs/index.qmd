@@ -5,79 +5,128 @@ format:
   html: 
     number-sections: false
     title-block-banner: false
-    mainfont: Manrope
+    # mainfont: Manrope
     toc: false
 ---
 
-::: container
-::: content
+<!-- ::: {.container .column-page}
+
 <h1 class="css-qp8v3">
 
 ::: css-nzw60t
 NORTHWEST PATHOGEN GENOMICS CENTER OF EXCELLENCE
 :::
 
-respnet subtyping linkage
+wadoh_raccoon python package
 
 </h1>
 
-This site documents the Data Integration and Quality Assurance team's (DIQA) subtyping metadata pipeline. Here you can find onboarding and installation guides and documentation on our functions and scripts. 
+A Python package for transforming and linking pathogen sequencing/subtyping metadata.
 
-<a href="#collapseQuickstart" class="button">Get started</a>
 
-<!-- {{< bi github size=2em href="https://github.com/NW-PaGe/standards" >}} -->
+::: -->
+
+:::{.column-page}
+
+::: css-nzw60t
+NORTHWEST PATHOGEN GENOMICS CENTER OF EXCELLENCE
 :::
 
-::: image
-![](_extensions/edenian-prince/nwpage/nw_page_tree_logo.png){width="250"}
-:::
-:::
-
-<br> <br> <br>
-
-::: {#collapseQuickstart .column-page}
-::: {.column .box .green width="25%"}
-
-### [User Guides](guides/index.qmd)
-
-<a href="guides/index.qmd" class="card-link">
-
-{{< bi house-down size=4em >}}
-
-</a>
-
+:::{.title-header}
+[wadoh_raccoon]{style="font-family: 'JetBrains Mono'; background: rgba(192,192,192,.16);"} python package
 :::
 
-::: {.column .box .cyan width="25%"}
-
-### [Code Reference](reference/index.qmd)
-
-<a href="reference/index.qmd" class="card-link">
-
-{{< bi file-earmark-code size=4em >}}
-
-</a>
-
-:::
-
-::: {.column width="25%" .box .blue}
-
-<!-- ### Articles
-
-{{< bi journal-richtext size=4em >}} 
-
-<a href="ref/index.qmd"> </a> -->
-
-### [Articles](articles/index.qmd)
-
-<a href="articles/index.qmd" class="card-link">
-
-{{< bi journal-richtext size=4em >}} 
-
-</a>
-
-:::
+A Python package for transforming and linking pathogen sequencing/subtyping metadata.
 
 :::
 
 <br>
+
+:::{.column-page}
+
+## Package Details
+
+:::
+
+::::{.column-page .columns}
+
+:::{.column width="25%"}
+
+
+- accession matching functions
+- fuzzy matching functions
+- data cleaning utilities
+
+:::
+
+:::{.column width="75%"}
+
+:::{.panel-tabset}
+
+## accession matching
+
+```python
+import wadoh_raccoon as tp # tp for trash panda
+
+tp.match_accession()
+```
+
+## fuzzy matching
+
+```python
+import wadoh_raccoon as tp
+
+tp.match_accession()
+```
+
+## utilities
+
+```python
+from wadoh_raccoon.utils import helpers
+
+helpers.date_format()
+```
+:::
+:::
+
+::::
+
+:::{.column-page}
+
+## Installation
+
+:::{.panel-tabset}
+
+### normal install
+
+```python
+uv pip install polars
+uv pip install git+https://github.com/NW-PaGe/wadoh_raccoon.git#egg=wadoh_raccoon
+```
+
+### install specific version
+
+To install a specific version, find the git tag noted in the GitHub Release section (something like v0.2.5) and then put it in the install statement like .git@v0.2.5:
+
+```python
+uv pip install polars
+uv pip install git+https://github.com/NW-PaGe/wadoh_raccoon.git@v0.2.5#egg=wadoh_raccoon
+```
+
+:::
+
+:::
+
+
+:::{.column-page}
+
+## API Reference
+
+
+### normal install
+
+<a href="#collapseQuickstart" class="button">Get started</a>
+
+
+:::
+
