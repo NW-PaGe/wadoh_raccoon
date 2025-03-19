@@ -28,13 +28,10 @@ def date_format(col: str):
     
     Examples
     --------
-    ```{python}
-    #| echo: false
-    {{< include "../_setup.qmd" >}}
-    ```
+
     ```{python}
     import polars as pl
-    from src.subtype_link.utils.helpers import date_format
+    from wadoh_raccoon.utils import helpers
 
 
     df = pl.DataFrame({
@@ -52,7 +49,7 @@ def date_format(col: str):
     print(
         df
         .with_columns(
-            new_date=date_format('dates','new_date')
+            new_date=helpers.date_format('dates')
         )
     )
     
@@ -107,12 +104,8 @@ def save_raw_values(df_inp: pl.DataFrame, primary_key_col: str):
     Examples
     --------
     ```{python}
-    #| echo: false
-    {{< include "../_setup.qmd" >}}
-    ```
-    ```{python}
     import polars as pl
-    from test_project import helpers
+    from wadoh_raccoon.utils import helpers
 
     data = pl.DataFrame({
         "lab_name": ["PHL", "MFT", "ELR","PHL"],
@@ -125,12 +118,12 @@ def save_raw_values(df_inp: pl.DataFrame, primary_key_col: str):
             helpers.save_raw_values(df_inp=data,primary_key_col="WA_ID")
     )
 
-    helpers.gt_style(df_inp=data)
+    print(data)
     
     ```
 
     ```{python}
-    helpers.gt_style(df_inp=received_submissions_df)
+    print(received_submissions_df)
     ```
 
     """
