@@ -1,0 +1,76 @@
+[
+  {
+    "objectID": "reference/index.html",
+    "href": "reference/index.html",
+    "title": "Function reference",
+    "section": "",
+    "text": "main scripts that run the process\n\n\n\nhelpers",
+    "crumbs": [
+      "Reference",
+      "Function reference"
+    ]
+  },
+  {
+    "objectID": "reference/index.html#functions",
+    "href": "reference/index.html#functions",
+    "title": "Function reference",
+    "section": "",
+    "text": "main scripts that run the process\n\n\n\nhelpers",
+    "crumbs": [
+      "Reference",
+      "Function reference"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "wadoh_raccoon",
+    "section": "",
+    "text": "NORTHWEST PATHOGEN GENOMICS CENTER OF EXCELLENCE\n\n\nwadoh_raccoon python package\n\nA Python package for transforming and linking pathogen sequencing/subtyping metadata."
+  },
+  {
+    "objectID": "index.html#example-functions",
+    "href": "index.html#example-functions",
+    "title": "wadoh_raccoon",
+    "section": "Example Functions ",
+    "text": "Example Functions"
+  },
+  {
+    "objectID": "index.html#installation",
+    "href": "index.html#installation",
+    "title": "wadoh_raccoon",
+    "section": "Installation ",
+    "text": "Installation \n\nnormal installinstall specific version\n\n\nuv pip install polars\nuv pip install git+https://github.com/NW-PaGe/wadoh_raccoon.git#egg=wadoh_raccoon\n\n\nTo install a specific version, find the git tag noted in the GitHub Release section (something like v0.2.5) and then put it in the install statement like .git@v0.2.5:\nuv pip install polars\nuv pip install git+https://github.com/NW-PaGe/wadoh_raccoon.git@v0.2.5#egg=wadoh_raccoon"
+  },
+  {
+    "objectID": "index.html#api-reference",
+    "href": "index.html#api-reference",
+    "title": "wadoh_raccoon",
+    "section": "API Reference ",
+    "text": "API Reference \nreference"
+  },
+  {
+    "objectID": "reference/helpers.html",
+    "href": "reference/helpers.html",
+    "title": "helpers",
+    "section": "",
+    "text": "wadoh_raccoon.utils.helpers",
+    "crumbs": [
+      "Reference",
+      "Functions",
+      "helpers"
+    ]
+  },
+  {
+    "objectID": "reference/helpers.html#functions",
+    "href": "reference/helpers.html#functions",
+    "title": "helpers",
+    "section": "Functions",
+    "text": "Functions\n\n\n\nName\nDescription\n\n\n\n\ndate_format\nFormat Dates\n\n\ngt_style\nStyle for GT Tables\n\n\nsave_raw_values\nsave raw values\n\n\n\n\ndate_format\nwadoh_raccoon.utils.helpers.date_format(col)\nFormat Dates\nConvert string dates into a yyyy-mm-dd format. The function uses pl.coalesce to try to process different formats. For example, it will first try to convert m/d/y, and then if that doesn’t work it will try d/m/y. It’s not perfect, but if someone messes up the date it’s their fault.\nNote: it won’t attempt to convert excel dates. If someone sends us excel dates we will file a lawsuit.\n\nUsage\nTo be applied to a string date column.\n\n\nParameters\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ncol\nstr\na string column that has a date\nrequired\n\n\n\n\n\nReturns\n\n\n\nName\nType\nDescription\n\n\n\n\noutput_date\ndate\na date column\n\n\n\n\n\nExamples\n\nimport polars as pl\nfrom wadoh_raccoon.utils import helpers\n\n\ndf = pl.DataFrame({\n    \"dates\": [\n        \"2024-10-30\",     # ISO format\n        \"30/10/2024\",     # European format\n        \"10/20/2024\",     # US format\n        \"10-30-2024\",     # US format\n        \"October 30, 2024\",  # Full month name format,\n        \"45496\",           # an excel date LOL\n        \"2022-12-27 08:26:49\"\n    ]\n})\n\nprint(\n    df\n    .with_columns(\n        new_date=helpers.date_format('dates')\n    )\n)\n\nshape: (7, 2)\n┌─────────────────────┬────────────┐\n│ dates               ┆ new_date   │\n│ ---                 ┆ ---        │\n│ str                 ┆ date       │\n╞═════════════════════╪════════════╡\n│ 2024-10-30          ┆ 2024-10-30 │\n│ 30/10/2024          ┆ 2024-10-30 │\n│ 10/20/2024          ┆ 2024-10-20 │\n│ 10-30-2024          ┆ 2024-10-30 │\n│ October 30, 2024    ┆ 2024-10-30 │\n│ 45496               ┆ null       │\n│ 2022-12-27 08:26:49 ┆ 2022-12-27 │\n└─────────────────────┴────────────┘\n\n\n\n\n\ngt_style\nwadoh_raccoon.utils.helpers.gt_style(\n    df_inp,\n    title='',\n    subtitle='',\n    add_striping_inp=True,\n    index_inp=True,\n)\nStyle for GT Tables\n\nUsage\nApply this style to a Polars DataFrame\n\n\nExamples\n\nimport polars as pl\nfrom wadoh_raccoon.utils import helpers\ndf = pl.DataFrame({\n    \"x\": [1,1,2],\n    \"y\": [1,2,3]\n})\n\nA table with a title/subtitle:\n\nhelpers.gt_style(df_inp=df,title=\"My Title\",subtitle=\"My Subtitle\")\n\n\n\n\n\n\n\nMy Title\n\n\nMy Subtitle\n\n\nindex\nx\ny\n\n\n\n\n0\n1\n1\n\n\n1\n1\n2\n\n\n2\n2\n3\n\n\n\n\n\n\n        \n\n\nNo title/subtitle\n\nhelpers.gt_style(df_inp=df)\n\n\n\n\n\n\n\nindex\nx\ny\n\n\n\n\n0\n1\n1\n\n\n1\n1\n2\n\n\n2\n2\n3\n\n\n\n\n\n\n        \n\n\nWithout an index:\n\nhelpers.gt_style(df_inp=df,index_inp=False)\n\n\n\n\n\n\n\nx\ny\n\n\n\n\n1\n1\n\n\n1\n2\n\n\n2\n3\n\n\n\n\n\n\n        \n\n\nWithout striping:\n\nhelpers.gt_style(df_inp=df,add_striping_inp=False)\n\n\n\n\n\n\n\nindex\nx\ny\n\n\n\n\n0\n1\n1\n\n\n1\n1\n2\n\n\n2\n2\n3\n\n\n\n\n\n\n        \n\n\n\n\n\nsave_raw_values\nwadoh_raccoon.utils.helpers.save_raw_values(df_inp, primary_key_col)\nsave raw values\n\nUsage\nConverts a polars dataframe into a dataframe with all columns in a struct column. It’s good for saving raw outputs of data.\n\n\nParameters\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndf_inp\npl.DataFrame\na polars dataframe\nrequired\n\n\nprimary_key_col\nstr\ncolumn name for the primary key (submission key, not person/case key)\nrequired\n\n\n\n\n\nReturns\n\n\n\nName\nType\nDescription\n\n\n\n\ndf\npl.DataFrame\na dataframe\n\n\n\n\n\nExamples\n\nimport polars as pl\nfrom wadoh_raccoon.utils import helpers\n\ndata = pl.DataFrame({\n    \"lab_name\": [\"PHL\", \"MFT\", \"ELR\",\"PHL\"],\n    \"first_name\": [\"Alice\", \"Bob\", \"Charlie\", \"Charlie\"],\n    \"last_name\": [\"Smith\", \"Johnson\", \"Williams\", \"Williams\"],\n    \"WA_ID\": [1,2,4,4]\n})\n\nreceived_submissions_df = (\n        helpers.save_raw_values(df_inp=data,primary_key_col=\"WA_ID\")\n)\n\nprint(data)\n\nshape: (4, 4)\n┌──────────┬────────────┬───────────┬───────┐\n│ lab_name ┆ first_name ┆ last_name ┆ WA_ID │\n│ ---      ┆ ---        ┆ ---       ┆ ---   │\n│ str      ┆ str        ┆ str       ┆ i64   │\n╞══════════╪════════════╪═══════════╪═══════╡\n│ PHL      ┆ Alice      ┆ Smith     ┆ 1     │\n│ MFT      ┆ Bob        ┆ Johnson   ┆ 2     │\n│ ELR      ┆ Charlie    ┆ Williams  ┆ 4     │\n│ PHL      ┆ Charlie    ┆ Williams  ┆ 4     │\n└──────────┴────────────┴───────────┴───────┘\n\n\n\nprint(received_submissions_df)\n\nshape: (4, 3)\n┌───────────────────┬──────────────────────┬────────────────────────────────┐\n│ submission_number ┆ internal_create_date ┆ raw_inbound_submission         │\n│ ---               ┆ ---                  ┆ ---                            │\n│ i64               ┆ date                 ┆ struct[4]                      │\n╞═══════════════════╪══════════════════════╪════════════════════════════════╡\n│ 1                 ┆ 2025-03-18           ┆ {\"PHL\",\"Alice\",\"Smith\",1}      │\n│ 2                 ┆ 2025-03-18           ┆ {\"MFT\",\"Bob\",\"Johnson\",2}      │\n│ 4                 ┆ 2025-03-18           ┆ {\"ELR\",\"Charlie\",\"Williams\",4} │\n│ 4                 ┆ 2025-03-18           ┆ {\"PHL\",\"Charlie\",\"Williams\",4} │\n└───────────────────┴──────────────────────┴────────────────────────────────┘",
+    "crumbs": [
+      "Reference",
+      "Functions",
+      "helpers"
+    ]
+  }
+]
