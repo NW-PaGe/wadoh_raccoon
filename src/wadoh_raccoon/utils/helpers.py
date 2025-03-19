@@ -1,6 +1,7 @@
 import polars as pl
 from datetime import datetime
 from datetime import date
+from great_tables import GT, md, style, loc, google_font
 
 def date_format(col: str):
     """ Format Dates
@@ -143,3 +144,98 @@ def save_raw_values(df_inp: pl.DataFrame, primary_key_col: str):
     )
 
     return df
+
+
+def gt_style(
+    df_inp: pl.DataFrame,
+    title: str="",
+    subtitle: str="",
+    add_striping_inp=True,
+    index_inp=True
+):
+
+    """ Style for GT Tables
+
+    Usage
+    -----
+    Apply this style to a Polars DataFrame
+
+    Examples
+    --------
+    ```{python}
+    import polars as pl
+    from wadoh_raccoon.utils import helpers
+    df = pl.DataFrame({
+        "x": [1,1,2],
+        "y": [1,2,3]
+    })
+
+    ```
+    A table with a title/subtitle:
+    
+    ```{python}
+    helpers.gt_style(df_inp=df,title="My Title",subtitle="My Subtitle")
+
+    ```
+
+    No title/subtitle
+    ```{python}
+    helpers.gt_style(df_inp=df)
+    ```
+
+    Without an index:
+    ```{python}
+    helpers.gt_style(df_inp=df,index_inp=False)
+    ```
+
+    Without striping:
+    ```{python}
+    helpers.gt_style(df_inp=df,add_striping_inp=False)
+    ```
+
+    """
+    # Check for title and subtitle, and conditionally add them
+    table = (
+        GT(
+            df_inp.with_row_index() if index_inp else df_inp,  # Add row index only if index_inp is True
+            rowname_col="index" if index_inp else None
+        )
+        # .opt_vertical_padding(scale=1)
+        # .opt_stylize(add_row_striping=add_striping_inp,color='black')
+        # .opt_row_striping()
+        .opt_table_font(font=google_font(name="JetBrains Mono"))
+        .opt_table_outline(color='#0c0909')
+        .tab_style(
+            style=[
+                style.borders(sides=['bottom'],weight='2px',color='black')
+            ],
+            locations=loc.column_header()
+        )
+        .tab_style(
+            style=[
+                style.borders(sides=['bottom'],weight='2px',color='black')
+            ],
+            locations=loc.stubhead()
+        )
+        .tab_style(
+            style=[
+                style.fill(color="#f9e3d6")
+            ],
+            locations=[loc.stub(),loc.stubhead()]
+        )
+    )
+    
+    if title and subtitle:
+        table = table.tab_header(title=md(title), subtitle=md(subtitle))
+    
+    elif title:
+        table = table.tab_header(subtitle=md(title))
+
+    if add_striping_inp:
+        table = table.opt_row_striping()
+
+    if index_inp:
+        table = table.tab_stubhead(label="index")
+
+
+    return table

@@ -44,7 +44,7 @@ A Python package for transforming and linking pathogen sequencing/subtyping meta
 
 :::{.column-page}
 
-## Package Details
+## Example Functions {{< bi filetype-py >}}
 
 :::
 
@@ -53,8 +53,8 @@ A Python package for transforming and linking pathogen sequencing/subtyping meta
 :::{.column width="25%"}
 
 
-- accession matching functions
-- fuzzy matching functions
+- accession matching
+- fuzzy matching
 - data cleaning utilities
 
 :::
@@ -81,11 +81,35 @@ tp.match_accession()
 
 ## utilities
 
-```python
+```{python}
+#| output: false
+import polars as pl
 from wadoh_raccoon.utils import helpers
 
-helpers.date_format()
+df = pl.DataFrame({
+    "old_date": [
+        "2024-10-30",     # ISO format
+        "10-30-2024",     # US format
+        "October 30, 2024",  # Full month name format,
+        "45496"      # an excel date LOL
+    ]
+})
+
+# apply the function
+df.with_columns(new_date=helpers.date_format('old_date'))
+
 ```
+
+```{python}
+#| echo: false
+helpers.gt_style(
+    df
+    .with_columns(
+        new_date=helpers.date_format('old_date')
+    )
+)
+```
+
 :::
 :::
 
@@ -93,7 +117,7 @@ helpers.date_format()
 
 :::{.column-page}
 
-## Installation
+## Installation {{< bi file-earmark-arrow-down-fill >}}
 
 :::{.panel-tabset}
 
@@ -120,12 +144,10 @@ uv pip install git+https://github.com/NW-PaGe/wadoh_raccoon.git@v0.2.5#egg=wadoh
 
 :::{.column-page}
 
-## API Reference
+## API Reference {{< bi stickies-fill >}}
 
 
-### normal install
-
-<a href="#collapseQuickstart" class="button">Get started</a>
+<a href="reference/index.qmd" class="button">reference</a>
 
 
 :::

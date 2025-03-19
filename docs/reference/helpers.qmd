@@ -9,6 +9,7 @@
 | Name | Description |
 | --- | --- |
 | [date_format](#src.wadoh_raccoon.utils.helpers.date_format) | Format Dates |
+| [gt_style](#src.wadoh_raccoon.utils.helpers.gt_style) | Style for GT Tables |
 | [save_raw_values](#src.wadoh_raccoon.utils.helpers.save_raw_values) | save raw values |
 
 ### date_format { #src.wadoh_raccoon.utils.helpers.date_format }
@@ -68,6 +69,57 @@ print(
     )
 )
 
+```
+
+### gt_style { #src.wadoh_raccoon.utils.helpers.gt_style }
+
+```python
+wadoh_raccoon.utils.helpers.gt_style(
+    df_inp,
+    title='',
+    subtitle='',
+    add_striping_inp=True,
+    index_inp=True,
+)
+```
+
+Style for GT Tables
+
+#### Usage {.doc-section .doc-section-usage}
+
+Apply this style to a Polars DataFrame
+
+#### Examples {.doc-section .doc-section-examples}
+
+```{python}
+import polars as pl
+from wadoh_raccoon.utils import helpers
+df = pl.DataFrame({
+    "x": [1,1,2],
+    "y": [1,2,3]
+})
+
+```
+A table with a title/subtitle:
+
+```{python}
+helpers.gt_style(df_inp=df,title="My Title",subtitle="My Subtitle")
+
+```
+
+No title/subtitle
+```{python}
+helpers.gt_style(df_inp=df)
+```
+
+Without an index:
+```{python}
+helpers.gt_style(df_inp=df,index_inp=False)
+```
+
+Without striping:
+```{python}
+helpers.gt_style(df_inp=df,add_striping_inp=False)
 ```
 
 ### save_raw_values { #src.wadoh_raccoon.utils.helpers.save_raw_values }
