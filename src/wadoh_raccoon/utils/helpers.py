@@ -9,9 +9,8 @@ def date_format(col: str):
     Convert string dates into a yyyy-mm-dd format. 
     The function uses pl.coalesce to try to process different formats.
     For example, it will first try to convert m/d/y, and then if that doesn't work it will try d/m/y.
-    It's not perfect, but if someone messes up the date it's their fault.
     
-    **Note: it won't attempt to convert excel dates. If someone sends us excel dates we will file a lawsuit.**
+    **Note: it won't attempt to convert excel dates.**
 
     Usage
     -----
@@ -47,7 +46,7 @@ def date_format(col: str):
         ]
     })
     
-    print(
+    helpers.gt_style(
         df
         .with_columns(
             new_date=helpers.date_format('dates')
@@ -77,7 +76,6 @@ def date_format(col: str):
             pl.col(col).str.strptime(pl.Date, "%d/%m/%Y", strict=False),
             # if someone literally writes out the month. smh
             pl.col(col).str.strptime(pl.Date, "%B %d, %Y", strict=False),
-            # if someone sends an excel date we'll just reject it and call the cops on them
 
         )
         
@@ -119,12 +117,12 @@ def save_raw_values(df_inp: pl.DataFrame, primary_key_col: str):
             helpers.save_raw_values(df_inp=data,primary_key_col="WA_ID")
     )
 
-    print(data)
+    helpers.gt_style(data)
     
     ```
 
     ```{python}
-    print(received_submissions_df)
+    helpers.gt_style(received_submissions_df)
     ```
 
     """
@@ -229,7 +227,7 @@ def gt_style(
         table = table.tab_header(title=md(title), subtitle=md(subtitle))
     
     elif title:
-        table = table.tab_header(subtitle=md(title))
+        table = table.tab_header(title=md(title))
 
     if add_striping_inp:
         table = table.opt_row_striping()

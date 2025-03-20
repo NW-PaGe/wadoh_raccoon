@@ -353,6 +353,13 @@ td:first-child a {
   
 }
 
+.container-center {
+  display: flex;
+  justify-content: center; /* Centers horizontally */
+  align-items: center; /* Centers vertically */
+  height: 10vh; /* Ensures the container has enough height */
+}
+
 // .container-color {
 //   border: 1px solid #000;
 //   background-color: #e9ecef;

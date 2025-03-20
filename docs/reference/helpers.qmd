@@ -23,9 +23,8 @@ Format Dates
 Convert string dates into a yyyy-mm-dd format. 
 The function uses pl.coalesce to try to process different formats.
 For example, it will first try to convert m/d/y, and then if that doesn't work it will try d/m/y.
-It's not perfect, but if someone messes up the date it's their fault.
 
-**Note: it won't attempt to convert excel dates. If someone sends us excel dates we will file a lawsuit.**
+**Note: it won't attempt to convert excel dates.**
 
 #### Usage {.doc-section .doc-section-usage}
 
@@ -62,7 +61,7 @@ df = pl.DataFrame({
     ]
 })
 
-print(
+helpers.gt_style(
     df
     .with_columns(
         new_date=helpers.date_format('dates')
@@ -165,10 +164,10 @@ received_submissions_df = (
         helpers.save_raw_values(df_inp=data,primary_key_col="WA_ID")
 )
 
-print(data)
+helpers.gt_style(data)
 
 ```
 
 ```{python}
-print(received_submissions_df)
+helpers.gt_style(received_submissions_df)
 ```

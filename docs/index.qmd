@@ -71,13 +71,273 @@ import wadoh_raccoon as tp # tp for trash panda
 tp.match_accession()
 ```
 
+
+```python
+import wadoh_raccoon as tp
+
+# input your dataframes and matching columns:
+tp.match_accession(
+    source=df1,
+    reference=df2,
+    accession='NCBI_ACCESSION'
+)
+```
+
+::::{.columns}
+
+:::{.column width="40%"}
+```{python}
+#| echo: false
+import polars as pl
+import wadoh_raccoon.utils.helpers as helpers
+from great_tables import GT, md, style, loc, google_font
+
+# Creating the first dataframe with 'first_name', 'last_name', 'dob' columns
+df1 = pl.DataFrame({
+    "accession": ["12345","CDC-010023",'L00029'],
+    "match": ["check","check","xmark"]
+})
+
+# Creating the second dataframe with the same columns plus a 'numeric_id' column
+df2 = pl.DataFrame({
+    "id": [1, 2, 3],
+    "accession": ["12345","CDC-010023",'X0293'],
+    "match": ["check","check","xmark"]
+})
+
+# Display the dataframes
+(
+    helpers.gt_style(df_inp=df1,index_inp=False)
+    .fmt_icon(
+        columns="match",
+        fill_color={"check": "green", "check": "red"}
+    )
+    .cols_label(
+        match=""
+    )
+)
+
+```
+
+:::{.container-center}
+
+{{< bi plus-lg size=2em >}}
+
+:::
+
+```{python}
+#| echo: false
+
+(
+    helpers.gt_style(df2,index_inp=False)
+    .tab_style(
+        style=[
+            style.fill(color="#f9e3d6")
+        ],
+        locations=[loc.body(columns="id"),loc.column_labels(columns="id")]
+    )
+    .fmt_icon(
+        columns="match",
+        fill_color={"check": "green", "check": "red"}
+    )
+    .cols_label(
+        match=""
+    )
+)
+```
+
+:::
+
+:::{.column width="5%"}
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+:::{style="transform: translate(45px,0px)"}
+
+{{< bi arrow-right-square-fill size=2em >}}
+
+:::
+
+:::
+
+:::{.column width="55%"}
+
+<br>
+
+<br>
+
+<br>
+
+
+```{python}
+#| echo: false
+
+# Creating the second dataframe with the same columns plus a 'numeric_id' column
+final = pl.DataFrame({
+    "id": [1, 2],
+    "accession": ["12345","CDC-010023"]
+})
+
+(
+    helpers.gt_style(final,index_inp=False)
+    .tab_style(
+        style=[
+            style.fill(color="#f9e3d6")
+        ],
+        locations=[loc.body(columns="id"),loc.column_labels(columns="id")]
+    )
+)
+
+```
+:::
+
+::::
+
 ## fuzzy matching
 
 ```python
 import wadoh_raccoon as tp
 
-tp.match_accession()
+# input your dataframes and matching columns:
+tp.fuzzZ(
+    source=df1,
+    reference=df2,
+    first_name_src="first",
+    last_name_src="last",
+    dob_src="dob",
+    first_name_ref="first",
+    last_name_ref="last",
+    dob_ref="dob"
+)
 ```
+
+::::{.columns}
+
+:::{.column width="40%"}
+```{python}
+#| echo: false
+import polars as pl
+import wadoh_raccoon.utils.helpers as helpers
+from great_tables import GT, md, style, loc, google_font
+
+# Creating the first dataframe with 'first_name', 'last_name', 'dob' columns
+df1 = pl.DataFrame({
+    "first": ["Jon", "Smith", "Alex"],
+    "last": ["Doe", "Jaane", "Johnson"],
+    "dob": ["1990-01-01", "1985-05-15", "2000-09-10"],
+    "match": ["check","check","xmark"]
+})
+
+# Creating the second dataframe with the same columns plus a 'numeric_id' column
+df2 = pl.DataFrame({
+    "id": [1, 2, 3],
+    "first": ["john", "jane", "Alice"],
+    "last": ["Dooe", "smith", "Johnson"],
+    "dob": ["1990-01-01", "1985-05-15", "2020-09-10"],
+    "match": ["check","check","xmark"]
+})
+
+# Display the dataframes
+(
+    helpers.gt_style(df_inp=df1,index_inp=False)
+    .fmt_icon(
+        columns="match",
+        fill_color={"check": "green", "check": "red"}
+    )
+    .cols_label(
+        match=""
+    )
+)
+
+```
+
+:::{.container-center}
+
+{{< bi plus-lg size=2em >}}
+
+:::
+
+```{python}
+#| echo: false
+
+(
+    helpers.gt_style(df2,index_inp=False)
+    .tab_style(
+        style=[
+            style.fill(color="#f9e3d6")
+        ],
+        locations=[loc.body(columns="id"),loc.column_labels(columns="id")]
+    )
+    .fmt_icon(
+        columns="match",
+        fill_color={"check": "green", "check": "red"}
+    )
+    .cols_label(
+        match=""
+    )
+)
+```
+
+:::
+
+:::{.column width="5%"}
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+:::{style="transform: translate(45px,0px)"}
+
+{{< bi arrow-right-square-fill size=2em >}}
+
+:::
+
+:::
+
+:::{.column width="55%"}
+
+<br>
+
+<br>
+
+<br>
+
+
+```{python}
+#| echo: false
+
+# Creating the second dataframe with the same columns plus a 'numeric_id' column
+final = pl.DataFrame({
+    "id": [1, 2],
+    "first": ["JOHN", "JANE"],
+    "last": ["DOE", "SMITH"],
+    "dob": ["1990-01-01", "1985-05-15"]
+})
+
+(
+    helpers.gt_style(final,index_inp=False)
+    .tab_style(
+        style=[
+            style.fill(color="#f9e3d6")
+        ],
+        locations=[loc.body(columns="id"),loc.column_labels(columns="id")]
+    )
+)
+
+```
+:::
+
+::::
 
 ## utilities
 
@@ -121,10 +381,9 @@ helpers.gt_style(
 
 :::{.panel-tabset}
 
-### normal install
+### install
 
 ```python
-uv pip install polars
 uv pip install git+https://github.com/NW-PaGe/wadoh_raccoon.git#egg=wadoh_raccoon
 ```
 
@@ -133,7 +392,6 @@ uv pip install git+https://github.com/NW-PaGe/wadoh_raccoon.git#egg=wadoh_raccoo
 To install a specific version, find the git tag noted in the GitHub Release section (something like v0.2.5) and then put it in the install statement like .git@v0.2.5:
 
 ```python
-uv pip install polars
 uv pip install git+https://github.com/NW-PaGe/wadoh_raccoon.git@v0.2.5#egg=wadoh_raccoon
 ```
 
