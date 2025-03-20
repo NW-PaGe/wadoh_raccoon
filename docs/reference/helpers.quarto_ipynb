@@ -50,7 +50,7 @@
         "\n",
         "#### Examples {.doc-section .doc-section-examples}\n"
       ],
-      "id": "ec622f6b"
+      "id": "55ffc1c9"
     },
     {
       "cell_type": "code",
@@ -79,7 +79,7 @@
         "    )\n",
         ")"
       ],
-      "id": "41bbd58d",
+      "id": "4b65e9b3",
       "execution_count": null,
       "outputs": []
     },
@@ -107,7 +107,7 @@
         "\n",
         "#### Examples {.doc-section .doc-section-examples}\n"
       ],
-      "id": "03e94a0b"
+      "id": "9d085635"
     },
     {
       "cell_type": "code",
@@ -120,7 +120,7 @@
         "    \"y\": [1,2,3]\n",
         "})"
       ],
-      "id": "599b5132",
+      "id": "e4c51dd8",
       "execution_count": null,
       "outputs": []
     },
@@ -130,7 +130,7 @@
       "source": [
         "A table with a title/subtitle:\n"
       ],
-      "id": "edd6fef3"
+      "id": "f9198039"
     },
     {
       "cell_type": "code",
@@ -138,7 +138,7 @@
       "source": [
         "helpers.gt_style(df_inp=df,title=\"My Title\",subtitle=\"My Subtitle\")"
       ],
-      "id": "c6464b02",
+      "id": "0b807b7c",
       "execution_count": null,
       "outputs": []
     },
@@ -148,7 +148,7 @@
       "source": [
         "No title/subtitle"
       ],
-      "id": "7ab98337"
+      "id": "75466fc0"
     },
     {
       "cell_type": "code",
@@ -156,7 +156,7 @@
       "source": [
         "helpers.gt_style(df_inp=df)"
       ],
-      "id": "4deb6d62",
+      "id": "b9c81db9",
       "execution_count": null,
       "outputs": []
     },
@@ -166,7 +166,7 @@
       "source": [
         "Without an index:"
       ],
-      "id": "7c3a1f84"
+      "id": "2061bd1e"
     },
     {
       "cell_type": "code",
@@ -174,7 +174,7 @@
       "source": [
         "helpers.gt_style(df_inp=df,index_inp=False)"
       ],
-      "id": "2a84317b",
+      "id": "edaa2193",
       "execution_count": null,
       "outputs": []
     },
@@ -184,7 +184,7 @@
       "source": [
         "Without striping:"
       ],
-      "id": "6b10c21d"
+      "id": "b4de2e1b"
     },
     {
       "cell_type": "code",
@@ -192,7 +192,7 @@
       "source": [
         "helpers.gt_style(df_inp=df,add_striping_inp=False)"
       ],
-      "id": "881e439d",
+      "id": "146f7226",
       "execution_count": null,
       "outputs": []
     },
@@ -228,7 +228,7 @@
         "\n",
         "#### Examples {.doc-section .doc-section-examples}\n"
       ],
-      "id": "9df2fb73"
+      "id": "08c7ad0a"
     },
     {
       "cell_type": "code",
@@ -250,7 +250,7 @@
         "\n",
         "helpers.gt_style(data)"
       ],
-      "id": "55e3b1a8",
+      "id": "79d66ef1",
       "execution_count": null,
       "outputs": []
     },
@@ -260,7 +260,7 @@
       "source": [
         "helpers.gt_style(received_submissions_df)"
       ],
-      "id": "fc9d6496",
+      "id": "30f42afa",
       "execution_count": null,
       "outputs": []
     }
