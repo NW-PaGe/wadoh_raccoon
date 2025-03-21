@@ -158,6 +158,25 @@ def gt_style(
     -----
     Apply this style to a Polars DataFrame
 
+    Parameters
+    ----------
+    df_inp: pl.DataFrame
+        a polars dataframe
+    title: str
+        a title for the table (optional)
+    subtitle: str
+        a subtitle for the table (optional, must have a title if using a subtitle)
+    add_striping_inp: bool
+        striping in the table True or False
+    index_inp: bool
+        add a column for the row number and label it `index`
+
+    Returns
+    -------
+    : GT
+        a GT object (great_tables table)
+    
+
     Examples
     --------
     ```{python}

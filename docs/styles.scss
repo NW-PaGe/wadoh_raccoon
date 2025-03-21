@@ -76,6 +76,19 @@ html { font-family: 'Inter', sans-serif; }
 	font-size: 17px;
 }
 
+// indent parameter descriptions for quartodoc
+.doc-section dl dd {
+  margin-left: 3rem;
+}
+
+.doc-section dl dt code {
+  font-family: 'JetBrains Mono';
+}
+
+dd {
+  margin-left: 3em;
+}
+
 /* css styles */
 
 .cell-output pre code {

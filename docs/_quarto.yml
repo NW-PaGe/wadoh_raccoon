@@ -12,10 +12,13 @@ quartodoc:
   # options:
   #   include_private: true
   dir: reference
-  # dir: src/subtype_link
-  # source_dir: ../src/subtype_link
   source_dir: ../
-  # out_index: reference/_api_index.qmd
+  # change parameter descriptions to a list and not a table
+  renderer:
+    style: markdown
+    table_style: description-list
+    show_signature_annotations: true
+    display_name: relative
 
   # write sidebar data to this file
   sidebar: _sidebar.yml

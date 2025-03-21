@@ -15,7 +15,7 @@
 ### date_format { #src.wadoh_raccoon.utils.helpers.date_format }
 
 ```python
-wadoh_raccoon.utils.helpers.date_format(col)
+wadoh_raccoon.utils.helpers.date_format(col: str)
 ```
 
 Format Dates
@@ -32,15 +32,15 @@ To be applied to a string date column.
 
 #### Parameters {.doc-section .doc-section-parameters}
 
-| Name   | Type   | Description                     | Default    |
-|--------|--------|---------------------------------|------------|
-| col    | str    | a string column that has a date | _required_ |
+<code>[**col**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   a string column that has a date
 
 #### Returns {.doc-section .doc-section-returns}
 
-| Name        | Type   | Description   |
-|-------------|--------|---------------|
-| output_date | date   | a date column |
+<code>[**output_date**]{.parameter-name} [:]{.parameter-annotation-sep} [date]{.parameter-annotation}</code>
+
+:   a date column
 
 #### Examples {.doc-section .doc-section-examples}
 
@@ -74,11 +74,11 @@ helpers.gt_style(
 
 ```python
 wadoh_raccoon.utils.helpers.gt_style(
-    df_inp,
-    title='',
-    subtitle='',
-    add_striping_inp=True,
-    index_inp=True,
+    df_inp: pl.DataFrame,
+    title: str = '',
+    subtitle: str = '',
+    add_striping_inp,
+    index_inp,
 )
 ```
 
@@ -87,6 +87,34 @@ Style for GT Tables
 #### Usage {.doc-section .doc-section-usage}
 
 Apply this style to a Polars DataFrame
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**df_inp**]{.parameter-name} [:]{.parameter-annotation-sep} [pl.DataFrame]{.parameter-annotation}</code>
+
+:   a polars dataframe
+
+<code>[**title**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation} [ = ]{.parameter-default-sep} [\'\']{.parameter-default}</code>
+
+:   a title for the table (optional)
+
+<code>[**subtitle**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation} [ = ]{.parameter-default-sep} [\'\']{.parameter-default}</code>
+
+:   a subtitle for the table (optional, must have a title if using a subtitle)
+
+<code>[**add_striping_inp**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation} [ = ]{.parameter-default-sep} [True]{.parameter-default}</code>
+
+:   striping in the table True or False
+
+<code>[**index_inp**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation} [ = ]{.parameter-default-sep} [True]{.parameter-default}</code>
+
+:   add a column for the row number and label it `index`
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [GT]{.parameter-annotation}</code>
+
+:   a GT object (great_tables table)
 
 #### Examples {.doc-section .doc-section-examples}
 
@@ -124,7 +152,10 @@ helpers.gt_style(df_inp=df,add_striping_inp=False)
 ### save_raw_values { #src.wadoh_raccoon.utils.helpers.save_raw_values }
 
 ```python
-wadoh_raccoon.utils.helpers.save_raw_values(df_inp, primary_key_col)
+wadoh_raccoon.utils.helpers.save_raw_values(
+    df_inp: pl.DataFrame,
+    primary_key_col: str,
+)
 ```
 
 save raw values
@@ -136,16 +167,19 @@ It's good for saving raw outputs of data.
 
 #### Parameters {.doc-section .doc-section-parameters}
 
-| Name            | Type         | Description                                                           | Default    |
-|-----------------|--------------|-----------------------------------------------------------------------|------------|
-| df_inp          | pl.DataFrame | a polars dataframe                                                    | _required_ |
-| primary_key_col | str          | column name for the primary key (submission key, not person/case key) | _required_ |
+<code>[**df_inp**]{.parameter-name} [:]{.parameter-annotation-sep} [pl.DataFrame]{.parameter-annotation}</code>
+
+:   a polars dataframe
+
+<code>[**primary_key_col**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   column name for the primary key (submission key, not person/case key)
 
 #### Returns {.doc-section .doc-section-returns}
 
-| Name   | Type         | Description   |
-|--------|--------------|---------------|
-| df     | pl.DataFrame | a dataframe   |
+<code>[**df**]{.parameter-name} [:]{.parameter-annotation-sep} [pl.DataFrame]{.parameter-annotation}</code>
+
+:   a dataframe
 
 #### Examples {.doc-section .doc-section-examples}
 
