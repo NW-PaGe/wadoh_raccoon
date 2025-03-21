@@ -1,6 +1,8 @@
 # wadoh_raccoon
 
-A Python package for transforming and linking pathogen sequencing/subtyping metadata 
+A Python package for transforming and linking pathogen sequencing/subtyping metadata.
+
+See our github page for function references and docs https://nw-page.github.io/wadoh_raccoon/ 
 
 # How to install the package
 
@@ -10,8 +12,7 @@ Open PowerShell terminal (or Ubuntu bash terminal)
 2. `pip install uv`
 3. `uv venv --python 3.11`
 4.  `.\.venv\Scripts\activate`
-5. `uv pip install polars`
-6. `uv pip install git+https://github.com/NW-PaGe/wadoh_raccoon.git#egg=wadoh_raccoon`
+5. `uv pip install git+https://github.com/NW-PaGe/wadoh_raccoon.git#egg=wadoh_raccoon`
 
 To install a specific version, find the git tag noted in the GitHub Release section (something like `v0.2.5`) and then put it in the install statement like `.git@v0.2.5`:
 
