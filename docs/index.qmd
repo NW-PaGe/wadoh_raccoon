@@ -2,11 +2,15 @@
 # title: "COVID-19 Lineages"
 # description: Documentation for pulling COVID-19 lineages from the CDC
 format: 
-  html: 
+  live-html: 
     number-sections: false
     title-block-banner: false
     # mainfont: Manrope
     toc: false
+    theme: styles.scss
+pyodide:
+    packages:
+        - polars
 ---
 
 <!-- ::: {.container .column-page}
@@ -369,6 +373,39 @@ helpers.gt_style(
 :::
 
 ::::
+
+
+::::{.column-page}
+
+## Try It Yourself
+
+```{pyodide}
+# import micropip as mp
+# await mp.install('wadoh_raccoon')
+# import wadoh_raccoon as tp
+import polars as pl
+
+df = pl.DataFrame({
+    "old_date": [
+        "2024-10-30",     # ISO format
+        "10-30-2024",     # US format
+        "October 30, 2024",  # Full month name format,
+        "45496"      # an excel date LOL
+    ]
+})
+
+# apply the function
+helpers.gt_style(
+    df
+    .with_columns(
+        new_date=helpers.date_format('old_date')
+    )
+)
+
+```
+
+::::
+
 
 :::{.column-page}
 
