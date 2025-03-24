@@ -36,6 +36,13 @@
     "text": "Example Functions"
   },
   {
+    "objectID": "index.html#try-it-yourself",
+    "href": "index.html#try-it-yourself",
+    "title": "wadoh_raccoon",
+    "section": "Try It Yourself",
+    "text": "Try It Yourself"
+  },
+  {
     "objectID": "index.html#installation",
     "href": "index.html#installation",
     "title": "wadoh_raccoon",
@@ -48,6 +55,17 @@
     "title": "wadoh_raccoon",
     "section": "API Reference ",
     "text": "API Reference \nreference"
+  },
+  {
+    "objectID": "articles/index.html",
+    "href": "articles/index.html",
+    "title": "builds",
+    "section": "",
+    "text": "most recent build",
+    "crumbs": [
+      "Articles",
+      "builds"
+    ]
   },
   {
     "objectID": "reference/helpers.html",
