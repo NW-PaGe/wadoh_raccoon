@@ -10,6 +10,7 @@ format:
     theme: styles.scss
 pyodide:
     packages:
+        - https://nw-page.github.io/wadoh_raccoon/articles/wadoh_raccoon-0.1.1-py3-none-any.whl
         - polars
 ---
 
