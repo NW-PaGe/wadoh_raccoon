@@ -383,7 +383,8 @@ helpers.gt_style(
 ```{pyodide}
 # import micropip as mp
 # await mp.install('wadoh_raccoon')
-# import wadoh_raccoon as tp
+import wadoh_raccoon as tp
+import wadoh_raccoon.utils.helpers as helpers
 import polars as pl
 
 df = pl.DataFrame({
