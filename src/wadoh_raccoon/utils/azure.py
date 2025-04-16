@@ -15,10 +15,8 @@ def blob_upload(account: str,
     """
     Uploads a local file to Azure Blob Storage.
 
-    This method uploads a file from a specified local directory (`local_dir`) to a specified
-    blob directory (`blob_path`) in Azure Blob Storage. The file is uploaded with a given name
-    (`file_name`), and an optional blob name (`blob_file_name`) can be provided. If no
-    `blob_file_name` is given, the file will be uploaded with the same name as the local file.
+    This method uploads a file from a specified local directory (`file_path`) to a specified
+    blob directory (`blob_path`) in Azure Blob Storage.
 
     Args:
         account (str): the storage account name.
@@ -214,8 +212,7 @@ def blob_download(account: str,
 
     This method authenticates with Azure using the Azure CLI, establishes a connection to the
     specified Azure Blob Storage container, and downloads a specific file from a given directory in
-    Azure Blob Storage. If the `blob_file_name` is not provided, the method assumes the file in the
-    blob storage is named the same as `file_name`.
+    Azure Blob Storage.
 
     Args:
         account (str, optional): The storage account name.
