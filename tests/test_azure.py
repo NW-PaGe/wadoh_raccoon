@@ -33,7 +33,7 @@ CONNECTION_STRING = (
 
 @pytest.fixture(scope="module", autouse=True)
 def check_azurite():
-    '''Test whether azurite is listening as the specified host and port'''
+    """Test whether azurite is listening as the specified host and port"""
     try:
         with socket.create_connection((AZURITE_HOST, AZURITE_PORT), timeout=5):
             pass  # Connection succeeded
@@ -42,7 +42,7 @@ def check_azurite():
 
 @pytest.fixture
 def local_file():
-    '''Create a temporary file containing BLOB_DATA'''
+    """Create a temporary file containing BLOB_DATA"""
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     temp_file.write(BLOB_DATA)
     temp_file.close()
@@ -51,17 +51,17 @@ def local_file():
 
 @pytest.fixture(scope="module")
 def service_client():
-    '''Create a service client object to be shared by all the azure tests'''
+    """Create a service client object to be shared by all the azure tests"""
     return BlobServiceClient.from_connection_string(conn_str=CONNECTION_STRING)
 
 @pytest.fixture(scope="module")
 def credential(service_client):
-    '''Create a credentials object to be shared by all the azure tests'''
+    """Create a credentials object to be shared by all the azure tests"""
     return service_client.credential
 
 @pytest.fixture
 def container_client(service_client):
-    '''Create a container client for each test'''
+    """Create a container client for each test"""
     # Initialize container (if not done so already)
     service_client.create_container(CONTAINER)
     # Initialize the container client
@@ -74,7 +74,7 @@ def container_client(service_client):
 
 
 def test_blob_upload(local_file, credential, container_client):
-    '''Test uploading a file to blob storage'''
+    """Test uploading a file to blob storage"""
     # Upload a file to azurite emulated blob storage
     azure.blob_upload(
         account=AZURITE_URL,
@@ -94,7 +94,7 @@ def test_blob_upload(local_file, credential, container_client):
 
 
 def test_blob_download(credential, container_client):
-    '''Test downloading a file from blob storage'''
+    """Test downloading a file from blob storage"""
     container_client.get_blob_client(BLOB).upload_blob(BLOB_DATA)
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     azure.blob_download(
@@ -114,11 +114,11 @@ def test_blob_download(credential, container_client):
 
 
 def test_blob_delete(credential, container_client):
-    '''Test deleting a blob'''
+    """Test deletion of a blob"""
     # Create blob
     container_client.get_blob_client(BLOB).upload_blob(BLOB_DATA)
     container_client.get_blob_client(BLOB_2).upload_blob(BLOB_DATA)
-    # Sanity check: make sure the container has one blob - the one that was just uploaded
+    # Sanity check: make sure the container has two blobs - the two that were just uploaded
     sc_names = sorted(list(container_client.list_blob_names()))
     exp_names = sorted([BLOB, BLOB_2])
     assert sc_names == exp_names, ("blob_delete sanity check failed:"
@@ -140,11 +140,12 @@ def test_blob_delete(credential, container_client):
 
 
 def test_blob_delete_recursive(credential, container_client):
+    """Test recursive deletion of blobs"""
     # Create multiple blobs - 2 of which have the same prefix
     container_client.get_blob_client(BLOB).upload_blob(BLOB_DATA)
     container_client.get_blob_client(BLOB_2).upload_blob(BLOB_DATA)
     container_client.get_blob_client(BLOB_3).upload_blob(BLOB_DATA)
-    # Sanity check: make sure the container has two blobs - the two that were just uploaded
+    # Sanity check: make sure the container has three blobs - the three that were just uploaded
     sc_names = sorted(list(container_client.list_blob_names()))
     exp_names = sorted([BLOB, BLOB_2, BLOB_3])
     assert sc_names == exp_names, ("recursive blob_delete sanity check failed:"
