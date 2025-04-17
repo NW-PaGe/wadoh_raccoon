@@ -21,9 +21,12 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "azure-identity>=1.21.0",
+    "azure-keyvault-secrets>=4.9.0",
     "jupyter>=1.1.1",
     "nbclient>=0.10.2",
     "nbformat>=5.10.4",
+    "paramiko>=2.8.1",
     "pytest>=8.3.5",
     "quartodoc>=0.9.1",
 ]
