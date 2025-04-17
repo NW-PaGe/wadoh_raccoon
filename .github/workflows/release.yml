@@ -46,18 +46,6 @@ jobs:
           github-token: ${{ secrets.github_token }}
           create-summary: true
 
-      # Only create a release if the changelog was generated successfully
-      - name: Create GitHub release
-        if: ${{ steps.changelog.outputs.skipped == 'false' }}
-        uses: actions/create-release@v1
-        with:
-          tag_name: ${{ steps.changelog.outputs.tag }}
-          release_name: ${{ steps.changelog.outputs.tag }}
-          body: ${{ steps.changelog.outputs.clean_changelog }}
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.github_token }}
-      
       - name: Set up uv
         if: ${{ steps.changelog.outputs.skipped == 'false' }}
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -72,14 +60,19 @@ jobs:
           uv build
 
       # Attach the build assets to the GitHub release (only if changelog creation was successful)
-      - name: Upload package dist to GitHub release
+      - name: Create GitHub release and discussion
         if: ${{ steps.changelog.outputs.skipped == 'false' }}
-        run: gh release upload $TAG $FILES --clobber
+        run: |
+          gh release create $TAG $FILES \
+            --title "$TAG" \
+            --notes "$CHANGELOG" \
+            --discussion-category "Announcements"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.changelog.outputs.tag }}
+          CHANGELOG: ${{ steps.changelog.outputs.clean_changelog }}
           FILES: dist/*.tar.gz dist/*.whl
-      
+          
       - name: Push Files for GitHub Action
         if: ${{ steps.changelog.outputs.skipped == 'false' }}
         run: |
