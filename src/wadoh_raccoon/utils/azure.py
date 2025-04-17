@@ -12,43 +12,53 @@ def blob_upload(account: str,
                 overwrite: bool = True,
                 access_tier: str = None,
                 account_is_url: bool = False):
-    """
+    """ Blob Upload
     Uploads a local file to Azure Blob Storage.
 
-    This method uploads a file from a specified local directory (`file_path`) to a specified
-    blob directory (`blob_path`) in Azure Blob Storage.
+    Usage
+    -----
+    This method can be used to upload a file from a specified local directory (`file_path`) into Azure blob storage
+    at the specified blob location (`blob_path`).
 
-    Args:
-        account (str): the storage account name.
-        container_name (str): the storage container name.
-        blob_path (str): The path and name of the blob to be created in Azure Blob Storage.
-        file_path (str): The path and name of the file to upload.
-        credential (TokenCredential, optional): The Azure credential used for authentication.
-                                                Can be any implementation of `azure.core.credentials.TokenCredential`
-                                                (e.g., `DefaultAzureCredential`, `AzureCliCredential`,
-                                                `ManagedIdentityCredential`). Defaults to `AzureCliCredential`.
-        overwrite (bool, optional): Whether blobs should be overwritten if they exist. Defaults to True.
-        access_tier (str, optional): The access tier for the blob ('Hot', 'Cool', 'Cold' or 'Archive').
-                                     If None, the default access tier will be used.
-        account_is_url (bool, optional): Whether `account` is supplied as a full URL instead of an account name.
-                                         Account URLs will be set as the account endpoint as-is, and should be used
-                                         for testing with Azurite, for example. Account names can be supplied with
-                                         this flag set to False, and will be constructed to a full URL in the form
-                                         of `https://{account}.blob.core.windows.net`. Defaults to False.
+    Parameters
+    ----------
+    account: str
+        the storage account name.
+    container_name: str
+        the storage container name.
+    blob_path: str
+        The path and name of the blob to be created in Azure Blob Storage.
+    file_path: str
+        The path and name of the file to upload.
+    credential: TokenCredential (optional)
+        The Azure credential used for authentication. Can be any implementation of
+        `azure.core.credentials.TokenCredential` (e.g., `DefaultAzureCredential`, `AzureCliCredential`,
+        `ManagedIdentityCredential`). Defaults to `AzureCliCredential`.
+    overwrite: bool (optional)
+        Whether blobs should be overwritten if they exist. Defaults to True.
+    access_tier: str (optional)
+        The access tier for the blob ('Hot', 'Cool', 'Cold' or 'Archive'). Defaults to container's default access tier.
+    account_is_url: bool (optional)
+        Whether `account` is supplied as a full URL instead of an account name. Account URLs will be set as the
+        account endpoint as-is, and should be used for testing with Azurite, for example. Account names can be
+        supplied with this flag set to False, and will be constructed to a full URL in the form of
+        `https://{account}.blob.core.windows.net`. Defaults to False.
 
-    Returns:
-        None: This method uploads the specified file to Azure Blob Storage and prints the
-              result, but does not return any value.
+    Returns
+    -------
+    None:
+        This method uploads the specified file to Azure Blob Storage and prints the result. No value is returned.
 
-    Example:
-        # Upload a file from a local directory to the blob storage:
-        # from wadoh_raccoon.utils.azure import blob_upload
-        # blob_upload(
-        #     account="mystorageaccount",
-        #     container_name="mycontainer",
-        #     file_path="data.csv",
-        #     blob_path="myblob/blob_data.csv"
-        # )
+    Examples
+    --------
+    # Upload a file from a local directory to the blob storage:
+    # from wadoh_raccoon.utils.azure import blob_upload
+    # blob_upload(
+    #     account="mystorageaccount",
+    #     container_name="mycontainer",
+    #     file_path="data.csv",
+    #     blob_path="myblob/blob_data.csv"
+    # )
     """
     # Validate access tier value
     if access_tier and access_tier.capitalize() not in ['Hot', 'Cool', 'Cold', 'Archive']:
@@ -90,30 +100,38 @@ def blob_upload(account: str,
 def __delete(client: ContainerClient,
              blob_path: str,
              recursive: bool = False):
-    """
+    """ Delete
     Deletes blobs from the specified directory in Azure Blob Storage.
 
+    Usage
+    -----
+    This is a private function utilize by `blob_delete` and should not be called outside of that scope.
+    This method can be used to upload a file from a local machine to Azure blob storage.
     This private helper method is designed to iterate through blobs within a given directory
     (`blob_path`) in Azure Blob Storage. It deletes blobs one by one, and if a subdirectory is
     found and the `recursive` flag is set to True, it continues the deletion process for that
     subdirectory.
 
-    Args:
-        client (ContainerClient): The Azure Blob Storage container client used to interact
-                                   with the blob container.
-        blob_path (str): The path to the directory (blob) to delete from. This can be a
-                        directory or a specific blob.
-        recursive (bool, optional): If True, subdirectories within the `blob_path` will also
-                                     be processed and deleted. Defaults to False.
+    Parameters
+    ----------
+    client: ContainerClient
+        The Azure Blob Storage container client used to interact with the blob container.
+    blob_path: str
+        The path to the directory (blob) to delete from. This can be a directory or a specific blob.
+    recursive: bool (optional)
+        If True, subdirectories within the `blob_path` will also be processed and deleted. Defaults to False.
 
-    Returns:
-        None: This method performs deletions and prints the results but does not return any value.
+    Returns
+    -------
+    None:
+        This method performs deletions and prints the results but does not return any value.
 
-    Example:
-        # Delete a specific blob:
-        # __delete(client=container_client, blob_path="blob/to_delete/data.csv")
-        # Delete a blob from a directory and any blobs in subdirectories:
-        # __delete(client=container_client, blob_path="blob/to_delete", recursive=True)
+    Examples
+    --------
+    # Delete a specific blob:
+    # __delete(client=container_client, blob_path="blob/to_delete/data.csv")
+    # Delete a blob from a directory and any blobs in subdirectories:
+    # __delete(client=container_client, blob_path="blob/to_delete", recursive=True)
         
     """
     blobs = client.walk_blobs(name_starts_with=blob_path)
@@ -134,48 +152,54 @@ def blob_delete(account: str,
                 credential: TokenCredential = None,
                 recursive: bool = False,
                 account_is_url: bool = False):
-    """
+    """ Blob Delete
     Deletes a specific file or all files within a directory in Azure Blob Storage.
 
-    This method establishes a connection to the specified Azure Blob Storage container and 
+    Usage
+    -----
+    This method establishes a connection to the specified Azure Blob Storage container and
     deletes either a specific file or all files within a given directory. If the `recursive` 
     flag is set to True, it will delete files from subdirectories as well.
 
-    Args:
-        account (str): the storage account name.
-        container_name (str): the storage container name.
-        blob_path (str): The directory (or blob) path from which files are to be deleted.
-                         This should be a directory path if deleting multiple files.
-        credential (TokenCredential, optional): The Azure credential used for authentication.
-                                                Can be any implementation of `azure.core.credentials.TokenCredential`
-                                                (e.g., `DefaultAzureCredential`, `AzureCliCredential`,
-                                                `ManagedIdentityCredential`). Defaults to `AzureCliCredential`.
-        recursive (bool, optional): If True, all files within subdirectories of `blob_path` will also be deleted. 
-                                    Defaults to False.
-        account_is_url (bool, optional): Whether `account` is supplied as a full URL instead of an account name.
-                                         Account URLs will be set as the account endpoint as-is, and should be used
-                                         for testing with Azurite, for example. Account names can be supplied with
-                                         this flag set to False, and will be constructed to a full URL in the form
-                                         of `https://{account}.blob.core.windows.net`. Defaults to False.
+    Parameters
+    ----------
+    account: str
+        the storage account name.
+    container_name: str
+        the storage container name.
+    blob_path: str
+        The directory (or blob) path from which files are to be deleted. This should be a directory path if
+        deleting multiple files.
+    credential: TokenCredential (optional)
+        The Azure credential used for authentication. Can be any implementation of
+        `azure.core.credentials.TokenCredential` (e.g., `DefaultAzureCredential`, `AzureCliCredential`,
+        `ManagedIdentityCredential`). Defaults to `AzureCliCredential`.
+    recursive: bool (optional)
+        If True, all files within subdirectories of `blob_path` will also be deleted. Defaults to False.
+    account_is_url: bool (optional)
+        Whether `account` is supplied as a full URL instead of an account name. Account URLs will be set as the
+        account endpoint as-is, and should be used for testing with Azurite, for example. Account names can be
+        supplied with this flag set to False, and will be constructed to a full URL in the form of
+        `https://{account}.blob.core.windows.net`. Defaults to False.
 
-    Returns:
-        None: This method deletes the specified file(s) or directory contents, and prints the
-              results but does not return any value.
+    Returns
+    -------
+    None:
+        This method deletes the specified file or directory contents and prints results, but does not return any value.
 
-    Example:
-        # Delete a specific blob file:
-        # blob_delete(account="myaccount",
-        #             container_name="mycontainer",
-        #             blob_path="blob/to_delete/data.txt")
+    Examples
+    --------
+    # Delete a specific blob file:
+    # blob_delete(account="myaccount",
+    #             container_name="mycontainer",
+    #             blob_path="blob/to_delete/data.txt")
 
-        # Delete files within a directory and any files in subdirectories:
-        # blob_delete(account="myaccount",
-        #             container_name="mycontainer",
-        #             blob_path="blob/to_delete/", 
-        #             recursive=True)
+    # Delete files within a directory and any files in subdirectories:
+    # blob_delete(account="myaccount",
+    #             container_name="mycontainer",
+    #             blob_path="blob/to_delete/",
+    #             recursive=True)
     """
-
-
     # Use Azure CLI creds to authenticate if not otherwise provided
     # NOTE: you will need to log in via the Azure CLI before this will work
     # Open your terminal and run `az login`; you may need to specify a specific tenant with `az login --tenant tenantid`
@@ -210,37 +234,45 @@ def blob_download(account: str,
     """
     Downloads a specific file from Azure Blob Storage to a local directory.
 
+    Usage
+    -----
     This method authenticates with Azure using the Azure CLI, establishes a connection to the
     specified Azure Blob Storage container, and downloads a specific file from a given directory in
     Azure Blob Storage.
 
-    Args:
-        account (str, optional): The storage account name.
-        container_name (str, optional): The storage container name.
-        blob_path (str): The blob path and name in Azure Blob Storage.
-        file_path (str): The local path and name where the file will be saved.
-                         The path must exist or will be created automatically.
-        credential (TokenCredential, optional): The Azure credential used for authentication.
-                                                Can be any implementation of `azure.core.credentials.TokenCredential`
-                                                (e.g., `DefaultAzureCredential`, `AzureCliCredential`,
-                                                `ManagedIdentityCredential`). Defaults to `AzureCliCredential`.
-        account_is_url (bool, optional): Whether `account` is supplied as a full URL instead of an account name.
-                                         Account URLs will be set as the account endpoint as-is, and should be used
-                                         for testing with Azurite, for example. Account names can be supplied with
-                                         this flag set to False, and will be constructed to a full URL in the form
-                                         of `https://{account}.blob.core.windows.net`. Defaults to False.
+    Parameters
+    ----------
+    account: str
+        The storage account name.
+    container_name: str
+        The storage container name.
+    blob_path: str
+        The blob path and name in Azure Blob Storage.
+    file_path: str
+        The local path and name where the file will be saved. The path must exist or will be created automatically.
+    credential: TokenCredential (optional)
+        The Azure credential used for authentication. Can be any implementation of
+        `azure.core.credentials.TokenCredential` (e.g., `DefaultAzureCredential`, `AzureCliCredential`,
+        `ManagedIdentityCredential`). Defaults to `AzureCliCredential`.
+    account_is_url: bool (optional)
+        Whether `account` is supplied as a full URL instead of an account name. Account URLs will be set as the
+        account endpoint as-is, and should be used for testing with Azurite, for example. Account names can be
+        supplied with this flag set to False, and will be constructed to a full URL in the form of
+        `https://{account}.blob.core.windows.net`. Defaults to False.
 
-    Returns:
-        None: This method downloads the specified file from Azure Blob Storage to the local machine
-              and prints the result, but does not return any value.
+    Returns
+    -------
+    None:
+        This method downloads the specified file from Azure Blob Storage to the local machine and prints the result,
+        but does not return any value.
 
-    Example:
-        # Download a specific file from Azure Blob Storage:
-        # blob_delete(account="myaccount",
-        #             container_name="mycontainer",
-        #             blob_path="blob/to_download/data.json",
-        #             file_path="data/data.json")
-
+    Examples
+    --------
+    # Download a specific file from Azure Blob Storage:
+    # blob_delete(account="myaccount",
+    #             container_name="mycontainer",
+    #             blob_path="blob/to_download/data.json",
+    #             file_path="data/data.json")
     """
     # Use Azure CLI creds to authenticate if not otherwise provided
     # NOTE: you will need to log in via the Azure CLI before this will work
