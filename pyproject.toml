@@ -11,7 +11,6 @@ dependencies = [
     "azure-identity>=1.21.0",
     "azure-keyvault-secrets>=4.9.0",
     "great-tables>=0.17.0",
-    "paramiko>=2.8.1",
     "polars>=1.18.0",
 ]
 

@@ -117,10 +117,13 @@ def get_secrets(vault, keys):
     --------
     ```{python}
     # Get a single secret
-    db_password = get_secrets("db-password")
+    db_password = get_secrets("keyvault_url", "db-password")
     
     # Get multiple secrets at once
-    username, password, api_key = get_secrets(["db-username", "db-password", "api-key"])
+    username, password, api_key = get_secrets(
+        "keyvault_url",
+        ["db-username", "db-password", "api-key"]
+    )
     ```
     """
     # Init credential and client
