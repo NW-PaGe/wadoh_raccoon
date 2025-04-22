@@ -51,14 +51,17 @@ def blob_upload(account: str,
 
     Examples
     --------
+    ```python
+    from wadoh_raccoon.utils.azure import blob_upload
+
     # Upload a file from a local directory to the blob storage:
-    # from wadoh_raccoon.utils.azure import blob_upload
-    # blob_upload(
-    #     account="mystorageaccount",
-    #     container_name="mycontainer",
-    #     file_path="data.csv",
-    #     blob_path="myblob/blob_data.csv"
-    # )
+    blob_upload(
+        account="mystorageaccount",
+        container_name="mycontainer",
+        file_path="data.csv",
+        blob_path="myblob/blob_data.csv"
+    )
+    ```
     """
     # Validate access tier value
     if access_tier and access_tier.capitalize() not in ['Hot', 'Cool', 'Cold', 'Archive']:
@@ -128,11 +131,15 @@ def __delete(client: ContainerClient,
 
     Examples
     --------
+    ```python
+    from wadoh_raccoon.utils.azure import __delete
+
     # Delete a specific blob:
-    # __delete(client=container_client, blob_path="blob/to_delete/data.csv")
+    __delete(client=container_client, blob_path="blob/to_delete/data.csv")
+
     # Delete a blob from a directory and any blobs in subdirectories:
-    # __delete(client=container_client, blob_path="blob/to_delete", recursive=True)
-        
+    __delete(client=container_client, blob_path="blob/to_delete", recursive=True)
+    ```
     """
     blobs = client.walk_blobs(name_starts_with=blob_path)
     for blob in blobs:
@@ -189,16 +196,20 @@ def blob_delete(account: str,
 
     Examples
     --------
+    ```python
+    from wadoh_raccoon.utils.azure import blob_delete
+
     # Delete a specific blob file:
-    # blob_delete(account="myaccount",
-    #             container_name="mycontainer",
-    #             blob_path="blob/to_delete/data.txt")
+    blob_delete(account="myaccount",
+                container_name="mycontainer",
+                blob_path="blob/to_delete/data.txt")
 
     # Delete files within a directory and any files in subdirectories:
-    # blob_delete(account="myaccount",
-    #             container_name="mycontainer",
-    #             blob_path="blob/to_delete/",
-    #             recursive=True)
+    blob_delete(account="myaccount",
+                container_name="mycontainer",
+                blob_path="blob/to_delete/",
+                recursive=True)
+    ```
     """
     # Use Azure CLI creds to authenticate if not otherwise provided
     # NOTE: you will need to log in via the Azure CLI before this will work
@@ -268,11 +279,15 @@ def blob_download(account: str,
 
     Examples
     --------
+    ```python
+    from wadoh_raccoon.utils.azure import blob_download
+
     # Download a specific file from Azure Blob Storage:
-    # blob_delete(account="myaccount",
-    #             container_name="mycontainer",
-    #             blob_path="blob/to_download/data.json",
-    #             file_path="data/data.json")
+    blob_download(account="myaccount",
+                container_name="mycontainer",
+                blob_path="blob/to_download/data.json",
+                file_path="data/data.json")
+    ```
     """
     # Use Azure CLI creds to authenticate if not otherwise provided
     # NOTE: you will need to log in via the Azure CLI before this will work
