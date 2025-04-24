@@ -2,6 +2,8 @@ import polars as pl
 from datetime import datetime
 from datetime import date
 from great_tables import GT, md, style, loc, google_font
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
 
 def date_format(col: str):
     """ Format Dates
@@ -78,7 +80,64 @@ def date_format(col: str):
             pl.col(col).str.strptime(pl.Date, "%B %d, %Y", strict=False),
 
         )
-        
+
+def get_secrets(vault, keys):
+    """ Get secrets
+
+    Retrieve secrets from Azure KeyVault.
+    This function will utilize the keys that are passed to retrieve the 
+    corresponding secrets.
+
+    **Note: Authenication takes place via DefaultAzureCredential which attempts
+    multiple authentication methods. One method is checking against Azure CLI 
+    if logged in.
+    
+    Usage
+    -----
+    Use this function to securely retrieve secret values from Azure KeyVault
+    using the specified key(s). The function accepts either a single key or
+    multiple keys as a list.
+    
+    Parameters
+    ----------
+    vault_url: str
+        Key vault url.
+    keys: str or list of str
+        A single secret key or list of secret keys.
+
+    
+    Returns
+    -------
+    str or tuple of str
+        If a single key is provided, returns the secret value as a string.
+        If a list of keys is provided, returns a tuple of secret values in the 
+        same order.
+    
+    Examples
+    --------
+    ```python
+    # Get a single secret
+    db_password = get_secrets("keyvault_url", "db-password")
+    
+    # Get multiple secrets at once
+    username, password, api_key = get_secrets(
+        "keyvault_url",
+        ["db-username", "db-password", "api-key"]
+    )
+    ```
+    """
+    # Init credential and client
+    credential = DefaultAzureCredential()
+    vault_url = vault
+    client = SecretClient(vault_url=vault_url, credential=credential)
+    
+    # Handle single string input
+    if isinstance(keys, str):
+        return client.get_secret(keys).value
+    
+    # Handle list input
+    return tuple(client.get_secret(key).value for key in keys)
+
 
 def save_raw_values(df_inp: pl.DataFrame, primary_key_col: str):
     """ save raw values
