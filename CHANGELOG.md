@@ -1,3 +1,13 @@
+# [0.2.0](https://github.com/NW-PaGe/wadoh_raccoon/compare/v0.1.1...v0.2.0) (2025-04-24)
+
+
+### Features
+
+* add azure blob utility methods ([a4a3e49](https://github.com/NW-PaGe/wadoh_raccoon/commit/a4a3e4924c957e466eb6dafbcf1bf8c984622c1b))
+* function to retrieve az kv secrets ([3e3b414](https://github.com/NW-PaGe/wadoh_raccoon/commit/3e3b4147866bec40e0548061872b68fe308d6296))
+
+
+
 ## [0.1.1](https://github.com/NW-PaGe/wadoh_raccoon/compare/v0.1.0...v0.1.1) (2025-03-13)
 
 
