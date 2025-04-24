@@ -32,6 +32,7 @@ quartodoc:
       package: src.wadoh_raccoon.utils
       contents:
         - helpers
+        - azure
 
 website:
   title: wadoh_raccoon
