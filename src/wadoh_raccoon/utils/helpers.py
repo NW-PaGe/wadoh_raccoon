@@ -115,7 +115,7 @@ def get_secrets(vault, keys):
     
     Examples
     --------
-    ```{python}
+    ```python
     # Get a single secret
     db_password = get_secrets("keyvault_url", "db-password")
     
