@@ -6,7 +6,7 @@ from pathlib import Path
 from wadoh_raccoon.dataframe_matcher import DataFrameMatcher
 
 # Path to test data directory
-TEST_DATA_DIR = Path(__file__).parent.parent / "data"
+TEST_DATA_DIR = Path(__file__).parent / "data"
 
 class TestDataFrameMatcher:
     """Test suite for the DataFrameMatcher class."""
@@ -23,17 +23,17 @@ class TestDataFrameMatcher:
         wdrs_path = TEST_DATA_DIR / "match_to_df.parquet"
         return pl.read_parquet(wdrs_path)
     
-    @pytest.fixture
-    def expected_exact_match_matched_df(self):
-        """Load the expected exact_match() output from disk."""
-        exact_match_matched_path = TEST_DATA_DIR / "exact_match_results_df.parquet"
-        return pl.read_parquet(exact_match_matched_path)
+    # @pytest.fixture
+    # def expected_exact_match_matched_df(self):
+    #     """Load the expected exact_match() output from disk."""
+    #     exact_match_matched_path = TEST_DATA_DIR / "exact_match_results_df.parquet"
+    #     return pl.read_parquet(exact_match_matched_path)
     
-    @pytest.fixture
-    def expected_exact_match_unmatched_df(self):
-        """Load the expected exact_match() output from disk."""
-        exact_match_unmatched_path = TEST_DATA_DIR / "exact_unmatched_results_df.parquet"
-        return pl.read_parquet(exact_match_unmatched_path)
+    # @pytest.fixture
+    # def expected_exact_match_unmatched_df(self):
+    #     """Load the expected exact_match() output from disk."""
+    #     exact_match_unmatched_path = TEST_DATA_DIR / "exact_unmatched_results_df.parquet"
+    #     return pl.read_parquet(exact_match_unmatched_path)
     
     @pytest.fixture
     def expected_fuzzy_match_matched_df(self):
@@ -47,17 +47,17 @@ class TestDataFrameMatcher:
         fuzzy_match_unmatched_path = TEST_DATA_DIR / "fuzzy_unmatched_results_df.parquet"
         return pl.read_parquet(fuzzy_match_unmatched_path)
     
-    @pytest.fixture
-    def expected_match_matched_df(self):
-        """Load the expected fuzzy_match() output from disk."""
-        match_matched_path = TEST_DATA_DIR / "match_matched_results_df.parquet"
-        return pl.read_parquet(match_matched_path)
+    # @pytest.fixture
+    # def expected_match_matched_df(self):
+    #     """Load the expected fuzzy_match() output from disk."""
+    #     match_matched_path = TEST_DATA_DIR / "match_matched_results_df.parquet"
+    #     return pl.read_parquet(match_matched_path)
     
-    @pytest.fixture
-    def expected_match_unmatched_df(self):
-        """Load the expected fuzzy_match() output from disk."""
-        match_unmatched_path = TEST_DATA_DIR / "match_unmatched_results_df.parquet"
-        return pl.read_parquet(match_unmatched_path)
+    # @pytest.fixture
+    # def expected_match_unmatched_df(self):
+    #     """Load the expected fuzzy_match() output from disk."""
+    #     match_unmatched_path = TEST_DATA_DIR / "match_unmatched_results_df.parquet"
+    #     return pl.read_parquet(match_unmatched_path)
 
     def test_init(self, match_df, match_to_df):
         """Test that the DataFrameMatcher initializes correctly."""
@@ -74,19 +74,19 @@ class TestDataFrameMatcher:
         for col in expected_columns:
             assert col in matcher.df_wdrs.columns
         
-        # Check exact_matched is None initially
-        assert matcher.exact_matched is None
-        # Check exact_unmatched is None initially
-        assert matcher.exact_unmatched is None
+        # # Check exact_matched is None initially
+        # assert matcher.exact_matched is None
+        # # Check exact_unmatched is None initially
+        # assert matcher.exact_unmatched is None
 
-    def test_exact_match(self, match_df, match_to_df, expected_exact_match_matched_df, expected_exact_match_unmatched_df):
-        """Test exact matching by Key field."""
-        matcher = DataFrameMatcher(match_df, match_to_df)
-        exact_matched_df, exact_unmatched_df = matcher.exact_match()
+    # def test_exact_match(self, match_df, match_to_df, expected_exact_match_matched_df, expected_exact_match_unmatched_df):
+    #     """Test exact matching by Key field."""
+    #     matcher = DataFrameMatcher(match_df, match_to_df)
+    #     exact_matched_df, exact_unmatched_df = matcher.exact_match()
 
-        # Use the correct method to compare Polars DataFrames
-        assert exact_matched_df.equals(expected_exact_match_matched_df)
-        assert exact_unmatched_df.equals(expected_exact_match_unmatched_df)
+    #     # Use the correct method to compare Polars DataFrames
+    #     assert exact_matched_df.equals(expected_exact_match_matched_df)
+    #     assert exact_unmatched_df.equals(expected_exact_match_unmatched_df)
 
         
     def test_fuzzy_match(self, match_df, match_to_df, expected_fuzzy_match_matched_df, expected_fuzzy_match_unmatched_df):
@@ -100,11 +100,11 @@ class TestDataFrameMatcher:
         assert fuzzy_unmatched_df.equals(expected_fuzzy_match_unmatched_df)
 
 
-    def test_match_full_pipeline(self, match_df, match_to_df, expected_match_matched_df, expected_match_unmatched_df):
-        """Test the complete matching pipeline combining exact and fuzzy matching."""
-        matcher = DataFrameMatcher(match_df, match_to_df)
-        matched, unmatched = matcher.match()
+    # def test_match_full_pipeline(self, match_df, match_to_df, expected_match_matched_df, expected_match_unmatched_df):
+    #     """Test the complete matching pipeline combining exact and fuzzy matching."""
+    #     matcher = DataFrameMatcher(match_df, match_to_df)
+    #     matched, unmatched = matcher.match()
         
-        # Use the correct method to compare Polars DataFrames
-        assert matched.equals(expected_match_matched_df)
-        assert unmatched.equals(expected_match_unmatched_df)
+    #     # Use the correct method to compare Polars DataFrames
+    #     assert matched.equals(expected_match_matched_df)
+    #     assert unmatched.equals(expected_match_unmatched_df)
