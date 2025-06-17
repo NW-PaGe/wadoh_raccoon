@@ -1,5 +1,34 @@
 import polars as pl
 from thefuzz import fuzz
+from wadoh_raccoon.utils import helpers
+
+def clean_names(first_name: str, last_name: str):
+    # ------- Process the Entire Table ------- #
+
+    # mutate the entire table
+    # remove null dates - for some reason couldn't do it in one step above
+    return (
+        pl.col(first_name).str.replace_all('[^a-zA-Z]','').str.to_uppercase().alias('first_name_clean'),
+        pl.col(last_name).str.replace_all('[^a-zA-Z]','').str.to_uppercase().alias('last_name_clean')
+    )
+
+def prep_df(df, first_name, last_name, spec_col_date, dob, output_spec_col_name, output_dob_name):
+
+    clean_df = (
+        df
+        .with_columns(
+            # clean_names converts the names to first_name_clean & last_name_clean fyi
+            clean_names(first_name=first_name, last_name=last_name),
+            temp_spec_col=helpers.date_format(df=df, col=spec_col_date),
+            temp_dob_col=helpers.date_format(df=df, col=dob)
+        )
+        .rename({"temp_spec_col": output_spec_col_name, "temp_dob_col": output_dob_name})
+        # now drop the original name columns to clean up the namespace
+        .select(pl.exclude([first_name, last_name, spec_col_date, dob]))
+    )
+
+    return clean_df
+
 
 class DataFrameMatcher:
     """
@@ -10,7 +39,21 @@ class DataFrameMatcher:
     patient demographics.
     """
 
-    def __init__(self, df_subm: pl.DataFrame, df_wdrs: pl.DataFrame):
+    def __init__(
+        self, 
+        df_subm: pl.DataFrame, 
+        df_ref: pl.DataFrame,
+
+        first_name_ref: str,
+        last_name_ref: str,
+        dob_ref: str,
+        spec_col_date_ref: str,
+
+        last_name_src: str,
+        first_name_src: str,
+        dob_src: str,
+        spec_col_date_src: str
+        ):
         """
         Initialize the DataFrameMatcher with two dataframes.
 
@@ -29,15 +72,19 @@ class DataFrameMatcher:
         None
         """
 
+        self.df_ref = df_ref
         self.df_subm = df_subm
-        self.df_wdrs = df_wdrs.select(["CASE_ID", 
-                                       "SPECIMEN__ID__ACCESSION__NUM__MANUAL", 
-                                       "FILLER__ORDER__NUM",
-                                       "FIRST_NAME",
-                                       "LAST_NAME",
-                                       "PATIENT_DOB", 
-                                       "SPECIMEN__COLLECTION__DTTM"
-                                       ])
+        # self.df_to_process_inp = df_to_process_inp
+
+        self.first_name_ref = first_name_ref
+        self.last_name_ref = last_name_ref
+        self.dob_ref = dob_ref
+        self.spec_col_date_ref = spec_col_date_ref
+
+        self.last_name_src = last_name_src
+        self.first_name_src = first_name_src
+        self.dob_src = dob_src
+        self.spec_col_date_src = spec_col_date_src
 
     # TODO: Exact matching goes here?
 
@@ -56,35 +103,64 @@ class DataFrameMatcher:
         pl.DataFrame
             subm_df records with matched CASE_ID, where found.
         """
+
+        ref = (
+            prep_df(
+                df=self.df_ref,
+                first_name=self.first_name_ref,
+                last_name=self.last_name_ref,
+                spec_col_date=self.spec_col_date_ref,
+                dob=self.dob_ref,
+                output_spec_col_name='reference_collection_date',
+                output_dob_name='reference_dob'
+            )
+            # Remove bad records
+            .filter(
+                (pl.col('first_name_clean').is_not_null()) &
+                (pl.col('last_name_clean').is_not_null())
+            )
+        )
+
+        submissions_to_fuzzy_prep = (
+            prep_df(
+                df=self.df_subm,
+                first_name=self.first_name_src,
+                last_name=self.last_name_src,
+                spec_col_date=self.spec_col_date_src,
+                dob=self.dob_src,
+                output_spec_col_name='submitted_collection_date',
+                output_dob_name='submitted_dob'
+            )
+        )
         
         # Create a cross join to compare all records
         # Note: depending on the size of the datasets may be too resource intensive
-        cross_join = self.df_subm.join(
-            self.df_wdrs,
+        cross_join = ref.join(
+            submissions_to_fuzzy_prep,
             how="cross"
         )
 
         # Add comparison columns with improved null handling
         compared = cross_join.with_columns([
             # Improved name comparison with explicit null handling
-            pl.struct(["FIRST_NAME", "FIRST_NAME_right"]).map_elements(
-                lambda x: fuzz.ratio(str(x["FIRST_NAME"].lower()), str(x["FIRST_NAME_right"].lower())) 
-                if x["FIRST_NAME"] is not None and x["FIRST_NAME_right"] is not None 
+            pl.struct(["first_name_clean", "first_name_clean_right"]).map_elements(
+                lambda x: fuzz.ratio(str(x["first_name_clean"].lower()), str(x["first_name_clean_right"].lower())) 
+                if x["first_name_clean"] is not None and x["first_name_clean_right"] is not None 
                 else 0,
                 skip_nulls=False
             ).alias("first_name_score"),
             
-            pl.struct(["LAST_NAME", "LAST_NAME_right"]).map_elements(
-                lambda x: fuzz.ratio(str(x["LAST_NAME"].lower()), str(x["LAST_NAME_right"].lower()))
-                if x["LAST_NAME"] is not None and x["LAST_NAME_right"] is not None 
+            pl.struct(["last_name_clean", "last_name_clean_right"]).map_elements(
+                lambda x: fuzz.ratio(str(x["last_name_clean"].lower()), str(x["last_name_clean_right"].lower()))
+                if x["last_name_clean"] is not None and x["last_name_clean_right"] is not None 
                 else 0,
                 skip_nulls=False
             ).alias("last_name_score"),
             
             # Improved date comparison with coalesce
             pl.coalesce([
-                (pl.col("PATIENT_DOB").cast(pl.Utf8).str.slice(0, 10) == 
-                pl.col("PATIENT_DOB_right").cast(pl.Utf8).str.slice(0, 10))
+                (pl.col('submitted_dob').cast(pl.Utf8).str.slice(0, 10) == 
+                pl.col("reference_dob").cast(pl.Utf8).str.slice(0, 10))
                 .cast(pl.Int64).mul(100),
                 pl.lit(0)
             ]).alias("dob_score"),
@@ -102,8 +178,8 @@ class DataFrameMatcher:
         ])
 
         scored_diff = scored.with_columns(
-            ((pl.col("SPECIMEN__COLLECTION__DTTM").dt.date() - 
-              pl.col("SPECIMEN__COLLECTION__DTTM_right"))
+            ((pl.col("submitted_collection_date").dt.date() - 
+              pl.col("reference_collection_date"))
               .abs().alias("collection_difference"))
         )
 
