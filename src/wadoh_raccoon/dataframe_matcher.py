@@ -52,7 +52,9 @@ class DataFrameMatcher:
         last_name_src: str,
         first_name_src: str,
         dob_src: str,
-        spec_col_date_src: str
+        spec_col_date_src: str,
+
+        key: str
         ):
         """
         Initialize the DataFrameMatcher with two dataframes.
@@ -85,6 +87,9 @@ class DataFrameMatcher:
         self.first_name_src = first_name_src
         self.dob_src = dob_src
         self.spec_col_date_src = spec_col_date_src
+
+        # submission key?
+        self.key = key
 
     # TODO: Exact matching goes here?
 
@@ -147,14 +152,16 @@ class DataFrameMatcher:
                 lambda x: fuzz.ratio(str(x["first_name_clean"].lower()), str(x["first_name_clean_right"].lower())) 
                 if x["first_name_clean"] is not None and x["first_name_clean_right"] is not None 
                 else 0,
-                skip_nulls=False
+                skip_nulls=False,
+                return_dtype=pl.Int64
             ).alias("first_name_score"),
             
             pl.struct(["last_name_clean", "last_name_clean_right"]).map_elements(
                 lambda x: fuzz.ratio(str(x["last_name_clean"].lower()), str(x["last_name_clean_right"].lower()))
                 if x["last_name_clean"] is not None and x["last_name_clean_right"] is not None 
                 else 0,
-                skip_nulls=False
+                skip_nulls=False,
+                return_dtype=pl.Int64
             ).alias("last_name_score"),
             
             # Improved date comparison with coalesce
@@ -192,13 +199,13 @@ class DataFrameMatcher:
         # apart it will take the case that is 12 days apart between the 
         # collection dates
         match_attempts = scored_diff.group_by(
-            "Key"
+            self.key
         ).agg([
             pl.all().sort_by(["match_score", "collection_difference"], 
                              descending=[True, False]).first()
         ])
 
-        match_attempts = match_attempts.sort("Key", descending=False)
+        match_attempts = match_attempts.sort(self.key, descending=False)
 
         # Filter into two dataframes; one fuzzy matched w/ a high degree of 
         # confidence and one fuzzy matched w/ a low degree of confidence (or
