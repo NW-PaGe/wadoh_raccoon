@@ -29,6 +29,81 @@ def prep_df(df, first_name, last_name, spec_col_date, dob, output_spec_col_name,
 
     return clean_df
 
+def filter_demo(submissions_to_fuzzy_prep):
+
+    # 2. Split by presence of demographics and specimen collection date
+    fuzzy_with_demo = (
+        submissions_to_fuzzy_prep
+        .filter(pl.col('first_name_clean').is_not_null() & 
+                pl.col('last_name_clean').is_not_null() & 
+                pl.col('submitted_collection_date').is_not_null() &
+                pl.col('submitted_dob').is_not_null())
+    )
+
+    # save fuzzy without demographics
+    fuzzy_without_demo = (
+        submissions_to_fuzzy_prep
+        .filter(pl.col('first_name_clean').is_null() |
+                pl.col('last_name_clean').is_null() | 
+                pl.col('submitted_collection_date').is_null() |
+                pl.col('submitted_dob').is_null())
+    )
+
+    return fuzzy_with_demo, fuzzy_without_demo
+
+def find_exact_match(ref, fuzzy_with_demo):
+
+    potential_matches = (
+        fuzzy_with_demo
+        .join(ref,
+            left_on=['first_name_clean','last_name_clean','submitted_dob'],
+            right_on=['first_name_clean','last_name_clean','reference_dob'],
+            how="left")
+        .with_columns(
+            date_subtract = (pl.col('submitted_collection_date') - pl.col('reference_collection_date'))
+        )
+        # for ones with multiple matches, pull the closest match based on collection date
+        # .group_by('submission_number')
+        # .agg([pl.all().sort_by('date_subtract').first()])
+        .sort(by=['submission_number','date_subtract'],nulls_last=True)
+        .unique(subset='submission_number',keep='first')
+    )
+
+    exact_match = potential_matches.filter((pl.col('CASE_ID').is_not_null()))
+
+    needs_fuzzy_match = (
+        potential_matches
+        .filter(
+            (pl.col('CASE_ID').is_null())
+        )
+        .select([
+            'submission_number',
+            'internal_create_date',
+            'submitted_dob',
+            'submitted_collection_date',
+            # 'reference_collection_date', # this will get brought in during the dob_match join to ref df
+            'first_name_clean',
+            'last_name_clean',
+        ])
+    )
+
+    # block/join based on dob
+    # for the remaining records that need to be fuzzy matched, 
+    # find all the records in the reference df that match based on dob
+    # this will give us a smaller pool to actually fuzzy match the names against,
+    # as opposed to fuzzy matching one name vs thousands
+    dob_match = (
+        needs_fuzzy_match
+        .join(
+            ref,
+            left_on = 'submitted_dob',
+            right_on='reference_dob',
+            how = 'left'
+        )
+    )
+
+    return exact_match, dob_match
+
 
 class DataFrameMatcher:
     """
@@ -92,8 +167,122 @@ class DataFrameMatcher:
         self.key = key
 
     # TODO: Exact matching goes here?
+    # clean dataframes first, then exact match
 
-    def fuzzy_match(self) -> pl.DataFrame:
+    def clean_all(self) -> pl.DataFrame:
+
+        ref_prep = (
+            prep_df(
+                df=self.df_ref,
+                first_name=self.first_name_ref,
+                last_name=self.last_name_ref,
+                spec_col_date=self.spec_col_date_ref,
+                dob=self.dob_ref,
+                output_spec_col_name='reference_collection_date',
+                output_dob_name='reference_dob'
+        )
+        # Remove bad records
+        .filter(
+            (pl.col('first_name_clean').is_not_null()) &
+            (pl.col('last_name_clean').is_not_null())
+        )
+    )
+
+        submissions_to_fuzzy_prep = (
+            prep_df(
+                df=self.df_subm,
+                first_name=self.first_name_src,
+                last_name=self.last_name_src,
+                spec_col_date=self.spec_col_date_src,
+                dob=self.dob_src,
+                output_spec_col_name='submitted_collection_date',
+                output_dob_name='submitted_dob'
+            )
+        )
+
+
+        return ref_prep, submissions_to_fuzzy_prep
+
+    def filter_demo(self, submissions_to_fuzzy_prep):
+
+        # 2. Split by presence of demographics and specimen collection date
+        fuzzy_with_demo = (
+            submissions_to_fuzzy_prep
+            .filter(pl.col('first_name_clean').is_not_null() & 
+                    pl.col('last_name_clean').is_not_null() & 
+                    pl.col('submitted_collection_date').is_not_null() &
+                    pl.col('submitted_dob').is_not_null())
+        )
+
+        # save fuzzy without demographics
+        fuzzy_without_demo = (
+            submissions_to_fuzzy_prep
+            .filter(pl.col('first_name_clean').is_null() |
+                    pl.col('last_name_clean').is_null() | 
+                    pl.col('submitted_collection_date').is_null() |
+                    pl.col('submitted_dob').is_null())
+        )
+
+        return fuzzy_with_demo, fuzzy_without_demo
+
+
+    def find_exact_match(self, ref_prep, fuzzy_with_demo):
+
+        potential_matches = (
+            fuzzy_with_demo
+            .join(ref_prep,
+                left_on=['first_name_clean','last_name_clean','submitted_dob'],
+                right_on=['first_name_clean','last_name_clean','reference_dob'],
+                how="left",
+                suffix="_em"
+            )
+            .with_columns(
+                date_subtract = (pl.col('submitted_collection_date') - pl.col('reference_collection_date'))
+            )
+            # for ones with multiple matches, pull the closest match based on collection date
+            # .group_by('submission_number')
+            # .agg([pl.all().sort_by('date_subtract').first()])
+            .sort(by=['submission_number','date_subtract'],nulls_last=True)
+            .unique(subset='submission_number',keep='first')
+        )
+
+        exact_match = potential_matches.filter((pl.col('CASE_ID').is_not_null()))
+
+        needs_fuzzy_match = (
+            potential_matches
+            .filter(
+                (pl.col('CASE_ID').is_null())
+            )
+            # .select([
+            #     # 'submission_number',
+            #     # 'internal_create_date',
+            #     'submitted_dob',
+            #     'submitted_collection_date',
+            #     # 'reference_collection_date', # this will get brought in during the dob_match join to ref df
+            #     'first_name_clean',
+            #     'last_name_clean',
+            # ])
+        )
+
+        # block/join based on dob
+        # for the remaining records that need to be fuzzy matched, 
+        # find all the records in the reference df that match based on dob
+        # this will give us a smaller pool to actually fuzzy match the names against,
+        # as opposed to fuzzy matching one name vs thousands
+        dob_match = (
+            needs_fuzzy_match
+            .join(
+                ref_prep,
+                left_on = 'submitted_dob',
+                right_on='reference_dob',
+                how = 'left'
+            )
+        )
+
+        return exact_match, dob_match
+
+
+    def fuzzy_match(self, dob_match, ref) -> pl.DataFrame:
         """
         Perform fuzzy matching to find CASE_ID by fuzzy matching on FIRST_NAME, 
         LAST_NAME, PATIENT_DOB, and SPECIMEN__COLLECTION__DTTM.
@@ -108,41 +297,13 @@ class DataFrameMatcher:
         pl.DataFrame
             subm_df records with matched CASE_ID, where found.
         """
-
-        ref = (
-            prep_df(
-                df=self.df_ref,
-                first_name=self.first_name_ref,
-                last_name=self.last_name_ref,
-                spec_col_date=self.spec_col_date_ref,
-                dob=self.dob_ref,
-                output_spec_col_name='reference_collection_date',
-                output_dob_name='reference_dob'
-            )
-            # Remove bad records
-            .filter(
-                (pl.col('first_name_clean').is_not_null()) &
-                (pl.col('last_name_clean').is_not_null())
-            )
-        )
-
-        submissions_to_fuzzy_prep = (
-            prep_df(
-                df=self.df_subm,
-                first_name=self.first_name_src,
-                last_name=self.last_name_src,
-                spec_col_date=self.spec_col_date_src,
-                dob=self.dob_src,
-                output_spec_col_name='submitted_collection_date',
-                output_dob_name='submitted_dob'
-            )
-        )
         
         # Create a cross join to compare all records
         # Note: depending on the size of the datasets may be too resource intensive
         cross_join = ref.join(
-            submissions_to_fuzzy_prep,
-            how="cross"
+            dob_match,
+            how="cross",
+            suffix="_cross_join"
         )
 
         # Add comparison columns with improved null handling
@@ -167,7 +328,7 @@ class DataFrameMatcher:
             # Improved date comparison with coalesce
             pl.coalesce([
                 (pl.col('submitted_dob').cast(pl.Utf8).str.slice(0, 10) == 
-                pl.col("reference_dob").cast(pl.Utf8).str.slice(0, 10))
+                pl.col("submitted_dob").cast(pl.Utf8).str.slice(0, 10))
                 .cast(pl.Int64).mul(100),
                 pl.lit(0)
             ]).alias("dob_score"),
@@ -218,3 +379,20 @@ class DataFrameMatcher:
         return fuzzy_matched, fuzzy_unmatched
     
     # TODO: Full matching goes here?
+
+    def fuzzZ(self, verbose=True):
+        
+        # Process the Submissions to Fuzzy
+        ref_prep, submissions_to_fuzzy_prep = self.clean_all()
+        # Split by presence of demographics and specimen collection date
+        fuzzy_with_demo, fuzzy_without_demo = self.filter_demo(submissions_to_fuzzy_prep)
+        # find exact matches
+        exact_match, dob_match = self.find_exact_match(ref_prep, fuzzy_with_demo)
+        # find fuzzy matches
+        fuzzy_matched, fuzzy_unmatched = self.fuzzy_match(exact_match, dob_match)
+        # # print summary
+        # if verbose:
+        #     self.__output_summary(submissions_to_fuzzy_df, fuzzy_matched_review, fuzzy_without_demo, fuzzy_matched_none,
+        #                fuzzy_matched_roster)
+        # return fuzzy outputs
+        return fuzzy_matched, fuzzy_unmatched, exact_match, fuzzy_without_demo
