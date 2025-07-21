@@ -47,6 +47,7 @@ class DataFrameMatcher:
         self, 
         df_subm: pl.DataFrame, 
         df_ref: pl.DataFrame,
+        threshold: int | float = 80,
 
         first_name: str | None = None,
         last_name: str | None = None,
@@ -366,10 +367,10 @@ class DataFrameMatcher:
                 )
                 # Mark columns that have ratio > 90
                 .with_columns(
-                    pl.when(pl.col('match_ratio') >= 80).then(1)
+                    pl.when(pl.col('match_ratio') >= self.threshold).then(1)
                     .otherwise(0).alias('matched'),
 
-                    pl.when(pl.col('reverse_match_ratio') >= 80).then(1)
+                    pl.when(pl.col('reverse_match_ratio') >= self.threshold).then(1)
                     .otherwise(0).alias('reverse_matched')
                 )
                 
