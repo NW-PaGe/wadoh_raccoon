@@ -59,11 +59,12 @@ class DataFrameMatcher:
         dob_src: str | None = None,
         spec_col_date_src: str | None = None,
 
-        key: str
         first_name_ref: str | None = None,
         last_name_ref: str | None = None,
         dob_ref: str | None = None,
         spec_col_date_ref: str | None = None,
+
+        key: str | None = None
         ):
         """
         Initialize the DataFrameMatcher with two dataframes.
@@ -93,8 +94,6 @@ class DataFrameMatcher:
         self.df_subm = df_subm
         self.df_ref = df_ref
 
-        # submission key?
-        self.key = key
         # Column names
         if first_name:
             self.first_name_src = str(first_name)
@@ -124,10 +123,21 @@ class DataFrameMatcher:
             self.spec_col_date_src = str(spec_col_date_src)
             self.spec_col_date_ref = str(spec_col_date_ref)
 
+        # submission key
+        if key is None:
+            self.key = '___key___'
+            self.key_isnone = True
+            self.df_subm = self.df_subm.with_row_index(name=self.key)
+        else:
+            self.key = key
+            self.key_isnone = False
+
+        # threshold
+        self.threshold = threshold
 
         # check for missing columns
         # List of columns to check
-        columns_to_check = ["submission_number", "internal_create_date"]
+        columns_to_check = [self.key, "internal_create_date"]
 
         # Check if columns exist
         # existence = {col: col in self.df_subm.columns for col in columns_to_check}
@@ -211,10 +221,10 @@ class DataFrameMatcher:
                 date_subtract = (pl.col('submitted_collection_date') - pl.col('reference_collection_date'))
             )
             # for ones with multiple matches, pull the closest match based on collection date
-            # .group_by('submission_number')
+            # .group_by(self.key)
             # .agg([pl.all().sort_by('date_subtract').first()])
-            .sort(by=['submission_number','date_subtract'],nulls_last=True)
-            .unique(subset='submission_number',keep='first')
+            .sort(by=[self.key,'date_subtract'], nulls_last=True)
+            .unique(subset=self.key, keep='first')
         )
 
         exact_match = potential_matches.filter((pl.col('CASE_ID').is_not_null()))
@@ -386,16 +396,16 @@ class DataFrameMatcher:
                 multiple_matches_ratios
                 .filter((pl.col('matched') != 1) & (pl.col('reverse_matched') != 1))
                 # remove any that were already matched - the filter above will still include bad matches
-                .join(multiple_matches_ratios_final, on='submission_number',how='anti')
+                .join(multiple_matches_ratios_final, on=self.key, how='anti')
                 .with_columns(
                     pl.when((pl.col('match_ratio')>60) | (pl.col('reverse_match_ratio')>60)).then(1)
                     .otherwise(0).alias('match_ratio_above_60'),
 
                 )
-                .group_by('submission_number')
+                .group_by(self.key)
                 .agg([pl.all().sort_by(['match_ratio_above_60'],descending=True).max()])
                 .select([
-                    'submission_number',
+                    self.key,
                     'internal_create_date',
                     'submitted_dob',
                     'submitted_collection_date',
@@ -437,17 +447,17 @@ class DataFrameMatcher:
             # then join back to the temp_mult_matches df to get all the og columns
             fuzzy_review = (
                 temp_mult_matches
-                .group_by(pl.col('submission_number'))
+                .group_by(pl.col(self.key))
                 .agg(pl.col('business_day_count').min())
 
                 # join back to gett all original cols join_nulls=True is nulls_equal=True in newer Polars versions
                 # NOTE: you need the join_nulls or nulls_equal=True because if a record has missing ref_collection_date
                 # then this join WILL NOT work because business_day_count will be null. it will return a dataframe that has all nulls for all cols
-                .join(temp_mult_matches,on=['submission_number','business_day_count'],how='left',join_nulls=True)
+                .join(temp_mult_matches,on=[self.key, 'business_day_count'],how='left',join_nulls=True)
                 # often times subtypes have a ton of rows in WDRS, just take the unique ones
                 .unique(maintain_order=True)
                 .select([
-                    'submission_number',
+                    self.key,
                     'internal_create_date',
                     'CASE_ID',
                     'first_name_clean',
@@ -469,7 +479,7 @@ class DataFrameMatcher:
         if fuzzy_review.select(pl.len())[0,0]==0:
             # Define the columns
             columns = [
-                'submission_number',
+                self.key,
                 'internal_create_date',
                 'first_name_clean',
                 'last_name_clean',
@@ -488,7 +498,7 @@ class DataFrameMatcher:
             fuzzy_matched = (
                 exact_match
                 .select([
-                    'submission_number',
+                    self.key,
                     'internal_create_date',
                     'first_name_clean',
                     'last_name_clean',
@@ -501,7 +511,7 @@ class DataFrameMatcher:
         else: 
             # Define the columns
             columns = [
-                'submission_number',
+                self.key,
                 'internal_create_date',
                 'first_name_clean',
                 'last_name_clean',
