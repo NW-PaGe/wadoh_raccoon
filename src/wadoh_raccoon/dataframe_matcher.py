@@ -29,6 +29,11 @@ def prep_df(df, first_name, last_name, spec_col_date, dob, output_spec_col_name,
 
     return clean_df
 
+def demo_param_checker(param, param_src, param_ref, param_name):
+    if param is None and (param_src is None or param_ref is None):
+        raise ValueError(f"`{param_name}` or both `{param_name}_src` and `{param_name}_ref` must not be None")
+
+
 class DataFrameMatcher:
     """
     A utility class for matching records.
@@ -43,17 +48,21 @@ class DataFrameMatcher:
         df_subm: pl.DataFrame, 
         df_ref: pl.DataFrame,
 
-        first_name_ref: str,
-        last_name_ref: str,
-        dob_ref: str,
-        spec_col_date_ref: str,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        dob: str | None = None,
+        spec_col_date: str | None = None,
 
-        last_name_src: str,
-        first_name_src: str,
-        dob_src: str,
-        spec_col_date_src: str,
+        first_name_src: str | None = None,
+        last_name_src: str | None = None,
+        dob_src: str | None = None,
+        spec_col_date_src: str | None = None,
 
         key: str
+        first_name_ref: str | None = None,
+        last_name_ref: str | None = None,
+        dob_ref: str | None = None,
+        spec_col_date_ref: str | None = None,
         ):
         """
         Initialize the DataFrameMatcher with two dataframes.
@@ -73,22 +82,47 @@ class DataFrameMatcher:
         None
         """
 
-        self.df_ref = df_ref
+        # Check col name param sets
+        demo_param_checker(first_name, first_name_ref, first_name_src, "first_name")
+        demo_param_checker(last_name, last_name_ref, last_name_src, "last_name")
+        demo_param_checker(dob, dob_ref, dob_src, "dob")
+        demo_param_checker(spec_col_date, spec_col_date_ref, spec_col_date_src, "spec_col_date")
+
+        # Source and reference data
         self.df_subm = df_subm
-        # self.df_to_process_inp = df_to_process_inp
-
-        self.first_name_ref = first_name_ref
-        self.last_name_ref = last_name_ref
-        self.dob_ref = dob_ref
-        self.spec_col_date_ref = spec_col_date_ref
-
-        self.last_name_src = last_name_src
-        self.first_name_src = first_name_src
-        self.dob_src = dob_src
-        self.spec_col_date_src = spec_col_date_src
+        self.df_ref = df_ref
 
         # submission key?
         self.key = key
+        # Column names
+        if first_name:
+            self.first_name_src = str(first_name)
+            self.first_name_ref = str(first_name)
+        else:
+            self.first_name_src = str(first_name_src)
+            self.first_name_ref = str(first_name_ref)
+
+        if last_name:
+            self.last_name_src = str(last_name)
+            self.last_name_ref = str(last_name)
+        else:
+            self.last_name_src = str(last_name_src)
+            self.last_name_ref = str(last_name_ref)
+
+        if dob:
+            self.dob_src = str(dob)
+            self.dob_ref = str(dob)
+        else:
+            self.dob_src = str(dob_src)
+            self.dob_ref = str(dob_ref)
+
+        if spec_col_date:
+            self.spec_col_date_src = str(spec_col_date)
+            self.spec_col_date_ref = str(spec_col_date)
+        else:
+            self.spec_col_date_src = str(spec_col_date_src)
+            self.spec_col_date_ref = str(spec_col_date_ref)
+
 
         # check for missing columns
         # List of columns to check
