@@ -90,6 +90,18 @@ class DataFrameMatcher:
         # submission key?
         self.key = key
 
+        # check for missing columns
+        # List of columns to check
+        columns_to_check = ["submission_number", "internal_create_date"]
+
+        # Check if columns exist
+        # existence = {col: col in self.df_subm.columns for col in columns_to_check}
+
+        missing_cols = [col for col in columns_to_check if col not in self.df_subm.columns]
+        if missing_cols:
+            raise pl.exceptions.ColumnNotFoundError(
+                f"Submission dataframe is missing required columns: {', '.join(missing_cols)}"
+            )
     # TODO: Exact matching goes here?
     # clean dataframes first, then exact match
 
