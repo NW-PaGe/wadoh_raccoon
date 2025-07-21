@@ -29,82 +29,6 @@ def prep_df(df, first_name, last_name, spec_col_date, dob, output_spec_col_name,
 
     return clean_df
 
-def filter_demo(submissions_to_fuzzy_prep):
-
-    # 2. Split by presence of demographics and specimen collection date
-    fuzzy_with_demo = (
-        submissions_to_fuzzy_prep
-        .filter(pl.col('first_name_clean').is_not_null() & 
-                pl.col('last_name_clean').is_not_null() & 
-                pl.col('submitted_collection_date').is_not_null() &
-                pl.col('submitted_dob').is_not_null())
-    )
-
-    # save fuzzy without demographics
-    fuzzy_without_demo = (
-        submissions_to_fuzzy_prep
-        .filter(pl.col('first_name_clean').is_null() |
-                pl.col('last_name_clean').is_null() | 
-                pl.col('submitted_collection_date').is_null() |
-                pl.col('submitted_dob').is_null())
-    )
-
-    return fuzzy_with_demo, fuzzy_without_demo
-
-def find_exact_match(ref, fuzzy_with_demo):
-
-    potential_matches = (
-        fuzzy_with_demo
-        .join(ref,
-            left_on=['first_name_clean','last_name_clean','submitted_dob'],
-            right_on=['first_name_clean','last_name_clean','reference_dob'],
-            how="left")
-        .with_columns(
-            date_subtract = (pl.col('submitted_collection_date') - pl.col('reference_collection_date'))
-        )
-        # for ones with multiple matches, pull the closest match based on collection date
-        # .group_by('submission_number')
-        # .agg([pl.all().sort_by('date_subtract').first()])
-        .sort(by=['submission_number','date_subtract'],nulls_last=True)
-        .unique(subset='submission_number',keep='first')
-    )
-
-    exact_match = potential_matches.filter((pl.col('CASE_ID').is_not_null()))
-
-    needs_fuzzy_match = (
-        potential_matches
-        .filter(
-            (pl.col('CASE_ID').is_null())
-        )
-        .select([
-            'submission_number',
-            'internal_create_date',
-            'submitted_dob',
-            'submitted_collection_date',
-            # 'reference_collection_date', # this will get brought in during the dob_match join to ref df
-            'first_name_clean',
-            'last_name_clean',
-        ])
-    )
-
-    # block/join based on dob
-    # for the remaining records that need to be fuzzy matched, 
-    # find all the records in the reference df that match based on dob
-    # this will give us a smaller pool to actually fuzzy match the names against,
-    # as opposed to fuzzy matching one name vs thousands
-    dob_match = (
-        needs_fuzzy_match
-        .join(
-            ref,
-            left_on = 'submitted_dob',
-            right_on='reference_dob',
-            how = 'left'
-        )
-    )
-
-    return exact_match, dob_match
-
-
 class DataFrameMatcher:
     """
     A utility class for matching records.
@@ -282,101 +206,269 @@ class DataFrameMatcher:
         return exact_match, dob_match
 
 
-    def fuzzy_match(self, dob_match, ref) -> pl.DataFrame:
-        """
-        Perform fuzzy matching to find CASE_ID by fuzzy matching on FIRST_NAME, 
-        LAST_NAME, PATIENT_DOB, and SPECIMEN__COLLECTION__DTTM.
-        
-        Parameters:
-        -----------
-        self : object
-            Instance of class
+    def fuzzy_match(self, exact_match, dob_match):
+        """ 
 
-        Returns:
+        Where the magic happens. Do the fuzzy matching to the dataframe
+
+        Parameters
+        ----------
+        exact_match: pl.DataFrame
+            the dataframe that has exact matches to the reference
+        dob_match: pl.DataFrame
+            the dataframe that has records grouped by their dob match
+        
+        Returns
+        ----------
+        fuzzy_with_demo: pl.DataFrame
+            dataframe with all of first name, last name, and dob filled out
+        fuzzy_without_demo: pl.DataFrame
+            dataframe that has records with one of first name, last name, or dob missing
+        
+        Examples
         --------
-        pl.DataFrame
-            subm_df records with matched CASE_ID, where found.
+        ```{python}
+        # Not to be run like this
+        # Only for demonstration!!
+
+        submissions_to_fuzzy_df = instance._fuzzy_process__submissions_to_fuzzy()
+        ref, submissions_to_fuzzy_prep = instance._fuzzy_process__transform(submissions_to_fuzzy_df)
+        fuzzy_with_demo, fuzzy_without_demo = instance._fuzzy_process__filter_demo(submissions_to_fuzzy_prep)
+        exact_match, dob_match = instance._fuzzy_process__find_exact_match(ref,fuzzy_with_demo)
+
+        fuzzy_matched_review, fuzzy_matched_none, fuzzy_matched_roster = instance._fuzzy_process__fuzzy_match(exact_match, dob_match)
+        ```
+        
+        Fuzzy match found:
+        ```{python}
+        helpers.gt_style(df_inp=fuzzy_matched_review)
+        ```
+
+
+        no matches found:
+        ```{python}
+        helpers.gt_style(df_inp=fuzzy_matched_none)
+        ```
+
+        exact demographic matches:
+        ```{python}
+        helpers.gt_style(df_inp=fuzzy_matched_roster)
+        ```
+
+        
         """
+
+        # ----- Init variables ----- # 
+        fuzzy_review = pl.DataFrame()
+        fuzzy_unmatched = pl.DataFrame()
+        fuzzy_matched = pl.DataFrame()
+
+        # ------- Fuzzy Matching ------- #
+
+        if dob_match.select(pl.len())[0,0] > 0:
+            multiple_matches_ratios = (
+                dob_match
+                .lazy()
+                .with_columns(
+                
+                    # Get a name string for grouping
+                    pl.concat_str(pl.col('first_name_clean'),pl.col('last_name_clean')).alias('combined_name'),
+
+                    # First get the fuzz ratio with the first name
+                    pl.struct(['first_name_clean','first_name_clean_right'])
+                    .map_elements(
+                        lambda cols: fuzz.ratio(cols['first_name_clean'],cols['first_name_clean_right']),
+                        skip_nulls=False,
+                        return_dtype=pl.Int64
+                    )
+                    .alias('first_name_result'),
+
+                    # Now get the fuzz ratio with the last name
+                    pl.struct(['last_name_clean','last_name_clean_right'])
+                    .map_elements(
+                        lambda cols: fuzz.ratio(cols['last_name_clean'],cols['last_name_clean_right']),
+                        skip_nulls=False,
+                        return_dtype=pl.Int64
+                        )
+                    .alias('last_name_result'),
+
+                    # Now reverse - WDRS is known to switch first and last names
+                    # First get the fuzz ratio with the first name
+                    pl.struct(['first_name_clean','last_name_clean_right'])
+                    .map_elements(
+                        lambda cols: fuzz.ratio(cols['first_name_clean'],cols['last_name_clean_right']),
+                        skip_nulls=False,
+                        return_dtype=pl.Int64
+                        )
+                    .alias('reverse_first_name_result'),
+
+                    # Now get the fuzz ratio with the last name
+                    pl.struct(['last_name_clean','first_name_clean_right'])
+                    .map_elements(
+                        lambda cols: fuzz.ratio(cols['last_name_clean'],cols['first_name_clean_right']),
+                        skip_nulls=False,
+                        return_dtype=pl.Int64
+                        )
+                    .alias('reverse_last_name_result'),
+
+                )
+                .with_columns(
+                    # Now get the ratios between first and last name matches
+                    # pl.struct(['first_name_result','last_name_result'])
+                    ((pl.col('first_name_result') + pl.col('last_name_result')) / 2).alias('match_ratio'),
+                    ((pl.col('reverse_first_name_result') + pl.col('reverse_last_name_result')) / 2).alias('reverse_match_ratio')
+                )
+                # Mark columns that have ratio > 90
+                .with_columns(
+                    pl.when(pl.col('match_ratio') >= 80).then(1)
+                    .otherwise(0).alias('matched'),
+
+                    pl.when(pl.col('reverse_match_ratio') >= 80).then(1)
+                    .otherwise(0).alias('reverse_matched')
+                )
+                
+            ).collect()
+
+            # Get ones that matched on ratio > 90
+            multiple_matches_ratios_final = (
+                multiple_matches_ratios.filter((pl.col('matched') == 1) | (pl.col('reverse_matched') == 1))
+            )
+
+            # get all the matches above 60
+            fuzzy_unmatched = (
+                multiple_matches_ratios
+                .filter((pl.col('matched') != 1) & (pl.col('reverse_matched') != 1))
+                # remove any that were already matched - the filter above will still include bad matches
+                .join(multiple_matches_ratios_final, on='submission_number',how='anti')
+                .with_columns(
+                    pl.when((pl.col('match_ratio')>60) | (pl.col('reverse_match_ratio')>60)).then(1)
+                    .otherwise(0).alias('match_ratio_above_60'),
+
+                )
+                .group_by('submission_number')
+                .agg([pl.all().sort_by(['match_ratio_above_60'],descending=True).max()])
+                .select([
+                    'submission_number',
+                    'internal_create_date',
+                    'submitted_dob',
+                    'submitted_collection_date',
+                    'first_name_clean',
+                    'last_name_clean',
+                    'first_name_clean_right',
+                    'last_name_clean_right',
+                    'reference_collection_date',
+                    'combined_name',
+                    'first_name_result',
+                    'last_name_result',
+                    'reverse_first_name_result',
+                    'reverse_last_name_result',
+                    'match_ratio',
+                    'reverse_match_ratio',
+                    'matched',
+                    'reverse_matched',
+                    'match_ratio_above_60'
+                ])
+            )
+
+            temp_mult_matches = (
+                multiple_matches_ratios_final
+                .with_columns(
+                
+                    # Get a name string for grouping
+                    pl.concat_str(pl.col('first_name_clean'),pl.col('last_name_clean')).alias('combined_name'),
+
+                    # Get a date range calculation of days between submitted collection date and collection date in WDRS
+                    # date_difference.alias('date_difference')
+                    business_day_count=pl.business_day_count("submitted_collection_date", "reference_collection_date"),
+
+                )
+            )
+
+            # print(temp_mult_matches.columns)
+
+            # here we need to group by sub_number and select the closest collection date difference
+            # then join back to the temp_mult_matches df to get all the og columns
+            fuzzy_review = (
+                temp_mult_matches
+                .group_by(pl.col('submission_number'))
+                .agg(pl.col('business_day_count').min())
+
+                # join back to gett all original cols join_nulls=True is nulls_equal=True in newer Polars versions
+                # NOTE: you need the join_nulls or nulls_equal=True because if a record has missing ref_collection_date
+                # then this join WILL NOT work because business_day_count will be null. it will return a dataframe that has all nulls for all cols
+                .join(temp_mult_matches,on=['submission_number','business_day_count'],how='left',join_nulls=True)
+                # often times subtypes have a ton of rows in WDRS, just take the unique ones
+                .unique(maintain_order=True)
+                .select([
+                    'submission_number',
+                    'internal_create_date',
+                    'CASE_ID',
+                    'first_name_clean',
+                    'last_name_clean',
+                    'submitted_dob',
+                    'first_name_clean_right',
+                    'last_name_clean_right',
+                    'submitted_collection_date',
+                    'reference_collection_date',
+                    'match_ratio',
+                    'reverse_match_ratio',
+                    'matched',
+                    'reverse_matched',
+                    'business_day_count',
+                    'combined_name'
+                    ])
+            )
         
-        # Create a cross join to compare all records
-        # Note: depending on the size of the datasets may be too resource intensive
-        cross_join = ref.join(
-            dob_match,
-            how="cross",
-            suffix="_cross_join"
-        )
+        if fuzzy_review.select(pl.len())[0,0]==0:
+            # Define the columns
+            columns = [
+                'submission_number',
+                'internal_create_date',
+                'first_name_clean',
+                'last_name_clean',
+                'submitted_dob',
+                'submitted_collection_date',
+                'reference_collection_date'
+            ]
 
-        # Add comparison columns with improved null handling
-        compared = cross_join.with_columns([
-            # Improved name comparison with explicit null handling
-            pl.struct(["first_name_clean", "first_name_clean_right"]).map_elements(
-                lambda x: fuzz.ratio(str(x["first_name_clean"].lower()), str(x["first_name_clean_right"].lower())) 
-                if x["first_name_clean"] is not None and x["first_name_clean_right"] is not None 
-                else 0,
-                skip_nulls=False,
-                return_dtype=pl.Int64
-            ).alias("first_name_score"),
-            
-            pl.struct(["last_name_clean", "last_name_clean_right"]).map_elements(
-                lambda x: fuzz.ratio(str(x["last_name_clean"].lower()), str(x["last_name_clean_right"].lower()))
-                if x["last_name_clean"] is not None and x["last_name_clean_right"] is not None 
-                else 0,
-                skip_nulls=False,
-                return_dtype=pl.Int64
-            ).alias("last_name_score"),
-            
-            # Improved date comparison with coalesce
-            pl.coalesce([
-                (pl.col('submitted_dob').cast(pl.Utf8).str.slice(0, 10) == 
-                pl.col("submitted_dob").cast(pl.Utf8).str.slice(0, 10))
-                .cast(pl.Int64).mul(100),
-                pl.lit(0)
-            ]).alias("dob_score"),
-        ])
+            # Create an empty dataframe with these columns
+            fuzzy_review = pl.DataFrame({col: [] for col in columns})
+            # fuzzy_matched_roster = pl.DataFrame()
 
-        # Calculate weighted score with validation
-        scored = compared.with_columns([
-            pl.coalesce([
-                (
-                    0.8 * ((pl.col("first_name_score") + pl.col("last_name_score")) / 2) +
-                    0.2 * pl.col("dob_score")
-                ),
-                pl.lit(0)  # Fallback if any component is null
-            ]).alias("match_score")
-        ])
+        # ------- Format Exact Matches ------- #
 
-        scored_diff = scored.with_columns(
-            ((pl.col("submitted_collection_date").dt.date() - 
-              pl.col("reference_collection_date"))
-              .abs().alias("collection_difference"))
-        )
+        if exact_match.select(pl.len())[0,0] > 0:
+            fuzzy_matched = (
+                exact_match
+                .select([
+                    'submission_number',
+                    'internal_create_date',
+                    'first_name_clean',
+                    'last_name_clean',
+                    'submitted_dob',
+                    'submitted_collection_date',
+                    'reference_collection_date',
+                    'CASE_ID'
+                    ])
+            )
+        else: 
+            # Define the columns
+            columns = [
+                'submission_number',
+                'internal_create_date',
+                'first_name_clean',
+                'last_name_clean',
+                'submitted_dob',
+                'submitted_collection_date'
+            ]
 
-        # Filter for matches above threshold to get best match per record
-        # Note: Filters by highest match score followed by the difference (days)
-        # between the submitted collection date and the collection date in WDRS 
-        # (lower is better). There can be multiple cases in WDRS tied to the 
-        # same person. Ex. There are 3 different cases with the same 
-        # match_score of 100 but the collection_difference is 12, 91, 200 days 
-        # apart it will take the case that is 12 days apart between the 
-        # collection dates
-        match_attempts = scored_diff.group_by(
-            self.key
-        ).agg([
-            pl.all().sort_by(["match_score", "collection_difference"], 
-                             descending=[True, False]).first()
-        ])
+            # Create an empty dataframe with these columns
+            fuzzy_matched = pl.DataFrame({col: [] for col in columns})
+            # fuzzy_matched_roster = pl.DataFrame()
 
-        match_attempts = match_attempts.sort(self.key, descending=False)
+        # breakpoint()
 
-        # Filter into two dataframes; one fuzzy matched w/ a high degree of 
-        # confidence and one fuzzy matched w/ a low degree of confidence (or
-        # unmatched)
-        fuzzy_matched = match_attempts.filter(pl.col("match_score") >= 80)
-        fuzzy_unmatched = match_attempts.filter(
-            (pl.col("match_score") < 80)
-        )
-        
-        return fuzzy_matched, fuzzy_unmatched
+        return fuzzy_review, fuzzy_unmatched, fuzzy_matched
     
     # TODO: Full matching goes here?
 
@@ -389,10 +481,10 @@ class DataFrameMatcher:
         # find exact matches
         exact_match, dob_match = self.find_exact_match(ref_prep, fuzzy_with_demo)
         # find fuzzy matches
-        fuzzy_matched, fuzzy_unmatched = self.fuzzy_match(exact_match, dob_match)
+        fuzzy_review, fuzzy_unmatched, fuzzy_matched = self.fuzzy_match(exact_match, dob_match)
         # # print summary
         # if verbose:
         #     self.__output_summary(submissions_to_fuzzy_df, fuzzy_matched_review, fuzzy_without_demo, fuzzy_matched_none,
         #                fuzzy_matched_roster)
         # return fuzzy outputs
-        return fuzzy_matched, fuzzy_unmatched, exact_match, fuzzy_without_demo
+        return fuzzy_matched, fuzzy_unmatched, exact_match, fuzzy_without_demo, fuzzy_review
