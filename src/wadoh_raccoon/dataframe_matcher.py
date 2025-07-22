@@ -213,9 +213,9 @@ class DataFrameMatcher:
 
         potential_matches = (
             fuzzy_with_demo
+            .join(ref_prep.with_columns(pl.lit(True).alias(indicator)),  # Add indicator column to determine join
                 left_on=['first_name_clean','last_name_clean','submitted_dob'],
                 right_on=['first_name_clean','last_name_clean','reference_dob'],
-            .join(ref_prep.with_columns(pl.lit(True).alias(indicator)),  # Add indicator column to determine join
                 how="left",
                 suffix="_em"
             )
