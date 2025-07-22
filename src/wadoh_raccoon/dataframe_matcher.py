@@ -209,11 +209,13 @@ class DataFrameMatcher:
 
     def find_exact_match(self, ref_prep, fuzzy_with_demo):
 
+        indicator = '___indicator___'  # Name for temp indicator col to determine join outcome
+
         potential_matches = (
             fuzzy_with_demo
-            .join(ref_prep,
                 left_on=['first_name_clean','last_name_clean','submitted_dob'],
                 right_on=['first_name_clean','last_name_clean','reference_dob'],
+            .join(ref_prep.with_columns(pl.lit(True).alias(indicator)),  # Add indicator column to determine join
                 how="left",
                 suffix="_em"
             )
@@ -227,22 +229,16 @@ class DataFrameMatcher:
             .unique(subset=self.key, keep='first')
         )
 
-        exact_match = potential_matches.filter((pl.col('CASE_ID').is_not_null()))
+        exact_match = (
+            potential_matches
+            .filter(pl.col(indicator).is_not_null())  # Keep only fields with ref_prep joined
+            .drop(indicator)  # Drop the temp indicator col
+        )
 
         needs_fuzzy_match = (
             potential_matches
-            .filter(
-                (pl.col('CASE_ID').is_null())
-            )
-            # .select([
-            #     # 'submission_number',
-            #     # 'internal_create_date',
-            #     'submitted_dob',
-            #     'submitted_collection_date',
-            #     # 'reference_collection_date', # this will get brought in during the dob_match join to ref df
-            #     'first_name_clean',
-            #     'last_name_clean',
-            # ])
+            .filter(pl.col(indicator).is_null())  # Keep only fields with ref_prep not joined
+            .drop(indicator)  # Drop the temp indicator col
         )
 
         # block/join based on dob
