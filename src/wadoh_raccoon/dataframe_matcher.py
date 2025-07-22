@@ -224,7 +224,7 @@ class DataFrameMatcher:
             potential_matches
             .filter(pl.col(indicator).is_null())  # Keep only fields with ref_prep not joined
             .drop(indicator)  # Drop the temp indicator col
-            .select(fuzzy_with_demo.columns)  # Drop the previously joined null value cols
+            .select(fuzzy_with_demo.collect_schema().names())  # Drop the previously joined null value cols
         )
 
         # block/join based on dob
