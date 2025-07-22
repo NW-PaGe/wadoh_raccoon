@@ -29,6 +29,11 @@ def prep_df(df, first_name, last_name, spec_col_date, dob, output_spec_col_name,
 
     return clean_df
 
+def demo_param_checker(param, param_src, param_ref, param_name):
+    if param is None and (param_src is None or param_ref is None):
+        raise ValueError(f"`{param_name}` or both `{param_name}_src` and `{param_name}_ref` must not be None")
+
+
 class DataFrameMatcher:
     """
     A utility class for matching records.
@@ -42,18 +47,24 @@ class DataFrameMatcher:
         self, 
         df_subm: pl.DataFrame, 
         df_ref: pl.DataFrame,
+        threshold: int | float = 80,
 
-        first_name_ref: str,
-        last_name_ref: str,
-        dob_ref: str,
-        spec_col_date_ref: str,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        dob: str | None = None,
+        spec_col_date: str | None = None,
 
-        last_name_src: str,
-        first_name_src: str,
-        dob_src: str,
-        spec_col_date_src: str,
+        first_name_src: str | None = None,
+        last_name_src: str | None = None,
+        dob_src: str | None = None,
+        spec_col_date_src: str | None = None,
 
-        key: str
+        first_name_ref: str | None = None,
+        last_name_ref: str | None = None,
+        dob_ref: str | None = None,
+        spec_col_date_ref: str | None = None,
+
+        key: str | None = None
         ):
         """
         Initialize the DataFrameMatcher with two dataframes.
@@ -73,26 +84,60 @@ class DataFrameMatcher:
         None
         """
 
-        self.df_ref = df_ref
+        # Check col name param sets
+        demo_param_checker(first_name, first_name_ref, first_name_src, "first_name")
+        demo_param_checker(last_name, last_name_ref, last_name_src, "last_name")
+        demo_param_checker(dob, dob_ref, dob_src, "dob")
+        demo_param_checker(spec_col_date, spec_col_date_ref, spec_col_date_src, "spec_col_date")
+
+        # Source and reference data
         self.df_subm = df_subm
-        # self.df_to_process_inp = df_to_process_inp
+        self.df_ref = df_ref
 
-        self.first_name_ref = first_name_ref
-        self.last_name_ref = last_name_ref
-        self.dob_ref = dob_ref
-        self.spec_col_date_ref = spec_col_date_ref
+        # Column names
+        if first_name:
+            self.first_name_src = str(first_name)
+            self.first_name_ref = str(first_name)
+        else:
+            self.first_name_src = str(first_name_src)
+            self.first_name_ref = str(first_name_ref)
 
-        self.last_name_src = last_name_src
-        self.first_name_src = first_name_src
-        self.dob_src = dob_src
-        self.spec_col_date_src = spec_col_date_src
+        if last_name:
+            self.last_name_src = str(last_name)
+            self.last_name_ref = str(last_name)
+        else:
+            self.last_name_src = str(last_name_src)
+            self.last_name_ref = str(last_name_ref)
 
-        # submission key?
-        self.key = key
+        if dob:
+            self.dob_src = str(dob)
+            self.dob_ref = str(dob)
+        else:
+            self.dob_src = str(dob_src)
+            self.dob_ref = str(dob_ref)
+
+        if spec_col_date:
+            self.spec_col_date_src = str(spec_col_date)
+            self.spec_col_date_ref = str(spec_col_date)
+        else:
+            self.spec_col_date_src = str(spec_col_date_src)
+            self.spec_col_date_ref = str(spec_col_date_ref)
+
+        # submission key
+        if key is None:
+            self.key = '___key___'
+            self.key_isnone = True
+            self.df_subm = self.df_subm.with_row_index(name=self.key)
+        else:
+            self.key = key
+            self.key_isnone = False
+
+        # threshold
+        self.threshold = threshold
 
         # check for missing columns
         # List of columns to check
-        columns_to_check = ["submission_number", "internal_create_date"]
+        columns_to_check = [self.key, "internal_create_date"]
 
         # Check if columns exist
         # existence = {col: col in self.df_subm.columns for col in columns_to_check}
@@ -164,9 +209,11 @@ class DataFrameMatcher:
 
     def find_exact_match(self, ref_prep, fuzzy_with_demo):
 
+        indicator = '___indicator___'  # Name for temp indicator col to determine join outcome
+
         potential_matches = (
             fuzzy_with_demo
-            .join(ref_prep,
+            .join(ref_prep.with_columns(pl.lit(True).alias(indicator)),  # Add indicator column to determine join
                 left_on=['first_name_clean','last_name_clean','submitted_dob'],
                 right_on=['first_name_clean','last_name_clean','reference_dob'],
                 how="left",
@@ -176,28 +223,22 @@ class DataFrameMatcher:
                 date_subtract = (pl.col('submitted_collection_date') - pl.col('reference_collection_date'))
             )
             # for ones with multiple matches, pull the closest match based on collection date
-            # .group_by('submission_number')
+            # .group_by(self.key)
             # .agg([pl.all().sort_by('date_subtract').first()])
-            .sort(by=['submission_number','date_subtract'],nulls_last=True)
-            .unique(subset='submission_number',keep='first')
+            .sort(by=[self.key,'date_subtract'], nulls_last=True)
+            .unique(subset=self.key, keep='first')
         )
 
-        exact_match = potential_matches.filter((pl.col('CASE_ID').is_not_null()))
+        exact_match = (
+            potential_matches
+            .filter(pl.col(indicator).is_not_null())  # Keep only fields with ref_prep joined
+            .drop(indicator)  # Drop the temp indicator col
+        )
 
         needs_fuzzy_match = (
             potential_matches
-            .filter(
-                (pl.col('CASE_ID').is_null())
-            )
-            # .select([
-            #     # 'submission_number',
-            #     # 'internal_create_date',
-            #     'submitted_dob',
-            #     'submitted_collection_date',
-            #     # 'reference_collection_date', # this will get brought in during the dob_match join to ref df
-            #     'first_name_clean',
-            #     'last_name_clean',
-            # ])
+            .filter(pl.col(indicator).is_null())  # Keep only fields with ref_prep not joined
+            .drop(indicator)  # Drop the temp indicator col
         )
 
         # block/join based on dob
@@ -332,10 +373,10 @@ class DataFrameMatcher:
                 )
                 # Mark columns that have ratio > 90
                 .with_columns(
-                    pl.when(pl.col('match_ratio') >= 80).then(1)
+                    pl.when(pl.col('match_ratio') >= self.threshold).then(1)
                     .otherwise(0).alias('matched'),
 
-                    pl.when(pl.col('reverse_match_ratio') >= 80).then(1)
+                    pl.when(pl.col('reverse_match_ratio') >= self.threshold).then(1)
                     .otherwise(0).alias('reverse_matched')
                 )
                 
@@ -351,16 +392,16 @@ class DataFrameMatcher:
                 multiple_matches_ratios
                 .filter((pl.col('matched') != 1) & (pl.col('reverse_matched') != 1))
                 # remove any that were already matched - the filter above will still include bad matches
-                .join(multiple_matches_ratios_final, on='submission_number',how='anti')
+                .join(multiple_matches_ratios_final, on=self.key, how='anti')
                 .with_columns(
                     pl.when((pl.col('match_ratio')>60) | (pl.col('reverse_match_ratio')>60)).then(1)
                     .otherwise(0).alias('match_ratio_above_60'),
 
                 )
-                .group_by('submission_number')
+                .group_by(self.key)
                 .agg([pl.all().sort_by(['match_ratio_above_60'],descending=True).max()])
                 .select([
-                    'submission_number',
+                    self.key,
                     'internal_create_date',
                     'submitted_dob',
                     'submitted_collection_date',
@@ -402,17 +443,17 @@ class DataFrameMatcher:
             # then join back to the temp_mult_matches df to get all the og columns
             fuzzy_review = (
                 temp_mult_matches
-                .group_by(pl.col('submission_number'))
+                .group_by(pl.col(self.key))
                 .agg(pl.col('business_day_count').min())
 
                 # join back to gett all original cols join_nulls=True is nulls_equal=True in newer Polars versions
                 # NOTE: you need the join_nulls or nulls_equal=True because if a record has missing ref_collection_date
                 # then this join WILL NOT work because business_day_count will be null. it will return a dataframe that has all nulls for all cols
-                .join(temp_mult_matches,on=['submission_number','business_day_count'],how='left',join_nulls=True)
+                .join(temp_mult_matches,on=[self.key, 'business_day_count'],how='left',join_nulls=True)
                 # often times subtypes have a ton of rows in WDRS, just take the unique ones
                 .unique(maintain_order=True)
                 .select([
-                    'submission_number',
+                    self.key,
                     'internal_create_date',
                     'CASE_ID',
                     'first_name_clean',
@@ -434,7 +475,7 @@ class DataFrameMatcher:
         if fuzzy_review.select(pl.len())[0,0]==0:
             # Define the columns
             columns = [
-                'submission_number',
+                self.key,
                 'internal_create_date',
                 'first_name_clean',
                 'last_name_clean',
@@ -453,7 +494,7 @@ class DataFrameMatcher:
             fuzzy_matched = (
                 exact_match
                 .select([
-                    'submission_number',
+                    self.key,
                     'internal_create_date',
                     'first_name_clean',
                     'last_name_clean',
@@ -466,7 +507,7 @@ class DataFrameMatcher:
         else: 
             # Define the columns
             columns = [
-                'submission_number',
+                self.key,
                 'internal_create_date',
                 'first_name_clean',
                 'last_name_clean',
