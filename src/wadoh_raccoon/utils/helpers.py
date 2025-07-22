@@ -5,14 +5,15 @@ from great_tables import GT, md, style, loc, google_font
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 
-def date_format(col: str):
+def date_format(df: pl.DataFrame,col: str):
     """ Format Dates
 
     Convert string dates into a yyyy-mm-dd format. 
     The function uses pl.coalesce to try to process different formats.
     For example, it will first try to convert m/d/y, and then if that doesn't work it will try d/m/y.
+    It's not perfect, but if someone messes up the date it's their fault.
     
-    **Note: it won't attempt to convert excel dates.**
+    **Note: it won't attempt to convert excel dates. If someone sends us excel dates we will file a lawsuit.**
 
     Usage
     -----
@@ -20,20 +21,27 @@ def date_format(col: str):
 
     Parameters
     ----------
+    df: pl.DataFrame
+        a polars dataframe (needed to check if col is pl.Date type or not)
     col: str
         a string column that has a date
+    
 
     Returns
     -------
-    output_date: date
+    pl.Expr: 
         a date column
     
     Examples
     --------
-
+    ```{python}
+    #| echo: false
+    {{< include "../_setup.qmd" >}}
+    ```
     ```{python}
     import polars as pl
-    from wadoh_raccoon.utils import helpers
+    from src.subtype_link.utils.helpers import date_format
+    import src.subtype_link.utils.helpers as helpers
 
 
     df = pl.DataFrame({
@@ -48,16 +56,27 @@ def date_format(col: str):
         ]
     })
     
-    helpers.gt_style(
+    output = (
         df
         .with_columns(
-            new_date=helpers.date_format('dates')
+            new_date=date_format(df=df,col='dates')
         )
     )
+
+    helpers.gt_style(df_inp=output)
     
     ```
 
     """
+    # return (
+    #     pl.when(pl.col(col).is_(pl.Date))
+    #     .then(pl.lit('date')).alias("check")
+    # )
+
+    if df[col].dtype.is_temporal():
+        return pl.col(col).cast(pl.Date)
+    
+
     return pl.coalesce(
             # see this for date types https://docs.rs/chrono/latest/chrono/format/strftime/index.html
             # regular dates like sane people yyyy-mm-dd
@@ -78,7 +97,7 @@ def date_format(col: str):
             pl.col(col).str.strptime(pl.Date, "%d/%m/%Y", strict=False),
             # if someone literally writes out the month. smh
             pl.col(col).str.strptime(pl.Date, "%B %d, %Y", strict=False),
-
+            # if someone sends an excel date we'll just reject it and call the cops on them
         )
 
 def get_secrets(vault, keys):
