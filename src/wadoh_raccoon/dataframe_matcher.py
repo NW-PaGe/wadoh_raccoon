@@ -2,37 +2,6 @@ import polars as pl
 from thefuzz import fuzz
 from wadoh_raccoon.utils import helpers
 
-def clean_names(first_name: str, last_name: str):
-    # ------- Process the Entire Table ------- #
-
-    # mutate the entire table
-    # remove null dates - for some reason couldn't do it in one step above
-    return (
-        pl.col(first_name).str.replace_all('[^a-zA-Z]','').str.to_uppercase().alias('first_name_clean'),
-        pl.col(last_name).str.replace_all('[^a-zA-Z]','').str.to_uppercase().alias('last_name_clean')
-    )
-
-def prep_df(df, first_name, last_name, spec_col_date, dob, output_spec_col_name, output_dob_name):
-
-    clean_df = (
-        df
-        .with_columns(
-            # clean_names converts the names to first_name_clean & last_name_clean fyi
-            clean_names(first_name=first_name, last_name=last_name),
-            temp_spec_col=helpers.date_format(df=df, col=spec_col_date),
-            temp_dob_col=helpers.date_format(df=df, col=dob)
-        )
-        .rename({"temp_spec_col": output_spec_col_name, "temp_dob_col": output_dob_name})
-        # now drop the original name columns to clean up the namespace
-        .select(pl.exclude([first_name, last_name, spec_col_date, dob]))
-    )
-
-    return clean_df
-
-def demo_param_checker(param, param_src, param_ref, param_name):
-    if param is None and (param_src is None or param_ref is None):
-        raise ValueError(f"`{param_name}` or both `{param_name}_src` and `{param_name}_ref` must not be None")
-
 
 class DataFrameMatcher:
     """
@@ -85,10 +54,10 @@ class DataFrameMatcher:
         """
 
         # Check col name param sets
-        demo_param_checker(first_name, first_name_ref, first_name_src, "first_name")
-        demo_param_checker(last_name, last_name_ref, last_name_src, "last_name")
-        demo_param_checker(dob, dob_ref, dob_src, "dob")
-        demo_param_checker(spec_col_date, spec_col_date_ref, spec_col_date_src, "spec_col_date")
+        self.__demo_param_checker(first_name, first_name_ref, first_name_src, "first_name")
+        self.__demo_param_checker(last_name, last_name_ref, last_name_src, "last_name")
+        self.__demo_param_checker(dob, dob_ref, dob_src, "dob")
+        self.__demo_param_checker(spec_col_date, spec_col_date_ref, spec_col_date_src, "spec_col_date")
 
         # Source and reference data
         self.df_subm = df_subm
@@ -135,11 +104,34 @@ class DataFrameMatcher:
         # threshold
         self.threshold = threshold
 
+    @staticmethod
+    def __prep_df(df, first_name, last_name, spec_col_date, dob, output_spec_col_name, output_dob_name):
+
+        clean_df = (
+            df
+            .with_columns(
+                # clean_name converts the names to first_name_clean & last_name_clean
+                helpers.clean_name(first_name).alias("first_name_clean"),
+                helpers.clean_name(last_name).alias("last_name_clean"),
+                temp_spec_col=helpers.date_format(df=df, col=spec_col_date),
+                temp_dob_col=helpers.date_format(df=df, col=dob)
+            )
+            .rename({"temp_spec_col": output_spec_col_name, "temp_dob_col": output_dob_name})
+            # now drop the original name columns to clean up the namespace
+            # .select(pl.exclude([first_name, last_name, spec_col_date, dob]))
+        )
+
+        return clean_df
+
+    @staticmethod
+    def __demo_param_checker(param, param_src, param_ref, param_name):
+        if param is None and (param_src is None or param_ref is None):
+            raise ValueError(f"`{param_name}` or both `{param_name}_src` and `{param_name}_ref` must not be None")
 
     def clean_all(self) -> pl.DataFrame:
 
         ref_prep = (
-            prep_df(
+            self.__prep_df(
                 df=self.df_ref,
                 first_name=self.first_name_ref,
                 last_name=self.last_name_ref,
@@ -156,7 +148,7 @@ class DataFrameMatcher:
     )
 
         submissions_to_fuzzy_prep = (
-            prep_df(
+            self.__prep_df(
                 df=self.df_subm,
                 first_name=self.first_name_src,
                 last_name=self.last_name_src,
