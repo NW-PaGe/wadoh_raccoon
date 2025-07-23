@@ -378,27 +378,6 @@ class DataFrameMatcher:
                 )
                 .group_by(self.key)
                 .agg([pl.all().sort_by(['match_ratio_above_60'],descending=True).max()])
-                .select([
-                    self.key,
-                    'internal_create_date',
-                    'submitted_dob',
-                    'submitted_collection_date',
-                    'first_name_clean',
-                    'last_name_clean',
-                    'first_name_clean_right',
-                    'last_name_clean_right',
-                    'reference_collection_date',
-                    'combined_name',
-                    'first_name_result',
-                    'last_name_result',
-                    'reverse_first_name_result',
-                    'reverse_last_name_result',
-                    'match_ratio',
-                    'reverse_match_ratio',
-                    'matched',
-                    'reverse_matched',
-                    'match_ratio_above_60'
-                ])
             )
 
             temp_mult_matches = (
@@ -430,72 +409,19 @@ class DataFrameMatcher:
                 .join(temp_mult_matches,on=[self.key, 'business_day_count'],how='left',join_nulls=True)
                 # often times subtypes have a ton of rows in WDRS, just take the unique ones
                 .unique(maintain_order=True)
-                .select([
-                    self.key,
-                    'internal_create_date',
-                    'CASE_ID',
-                    'first_name_clean',
-                    'last_name_clean',
-                    'submitted_dob',
-                    'first_name_clean_right',
-                    'last_name_clean_right',
-                    'submitted_collection_date',
-                    'reference_collection_date',
-                    'match_ratio',
-                    'reverse_match_ratio',
-                    'matched',
-                    'reverse_matched',
-                    'business_day_count',
-                    'combined_name'
-                    ])
             )
         
         if fuzzy_review.select(pl.len())[0,0]==0:
-            # Define the columns
-            columns = [
-                self.key,
-                'internal_create_date',
-                'first_name_clean',
-                'last_name_clean',
-                'submitted_dob',
-                'submitted_collection_date',
-                'reference_collection_date'
-            ]
-
-            # Create an empty dataframe with these columns
-            fuzzy_review = pl.DataFrame({col: [] for col in columns})
-            # fuzzy_matched_roster = pl.DataFrame()
+            fuzzy_review = pl.DataFrame()
 
         # ------- Format Exact Matches ------- #
 
         if exact_match.select(pl.len())[0,0] > 0:
             fuzzy_matched = (
                 exact_match
-                .select([
-                    self.key,
-                    'internal_create_date',
-                    'first_name_clean',
-                    'last_name_clean',
-                    'submitted_dob',
-                    'submitted_collection_date',
-                    'reference_collection_date',
-                    'CASE_ID'
-                    ])
             )
         else: 
-            # Define the columns
-            columns = [
-                self.key,
-                'internal_create_date',
-                'first_name_clean',
-                'last_name_clean',
-                'submitted_dob',
-                'submitted_collection_date'
-            ]
-
-            # Create an empty dataframe with these columns
-            fuzzy_matched = pl.DataFrame({col: [] for col in columns})
-            # fuzzy_matched_roster = pl.DataFrame()
+            fuzzy_matched = pl.DataFrame()
 
         # breakpoint()
 
