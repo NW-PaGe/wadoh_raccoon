@@ -5,6 +5,42 @@ from great_tables import GT, md, style, loc, google_font
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 
+
+def clean_name(col: str) -> pl.Expr:
+    """
+    Clean name field by stripping non-alpha characters and converting to uppercase.
+
+    Parameters
+    ----------
+    name (str):
+        Name of column to clean
+
+    Returns
+    -------
+    pl.Expr
+
+    Examples
+    --------
+    ```{python}
+    import polars as pl
+    from wadoh_raccoon.utils import helpers
+
+    df = pl.DataFrame({
+        "name": [
+            "A$AP rocky",
+            "50 cent",
+            "sTevIe WoNdEr"
+        ]
+    })
+
+    output = df.with_columns(helpers.clean_name("name").alias("clean_name"))
+
+    helpers.gt_style(df_inp=output)
+
+    ```
+    """
+    return pl.col(col).str.replace_all('[^a-zA-Z]', '').str.to_uppercase()
+
 def date_format(df: pl.DataFrame,col: str):
     """ Format Dates
 
@@ -35,14 +71,8 @@ def date_format(df: pl.DataFrame,col: str):
     Examples
     --------
     ```{python}
-    #| echo: false
-    {{< include "../_setup.qmd" >}}
-    ```
-    ```{python}
     import polars as pl
-    from src.subtype_link.utils.helpers import date_format
-    import src.subtype_link.utils.helpers as helpers
-
+    from wadoh_raccoon.utils import helpers
 
     df = pl.DataFrame({
         "dates": [
@@ -59,7 +89,7 @@ def date_format(df: pl.DataFrame,col: str):
     output = (
         df
         .with_columns(
-            new_date=date_format(df=df,col='dates')
+            new_date=helpers.date_format(df=df,col='dates')
         )
     )
 
@@ -135,11 +165,13 @@ def get_secrets(vault, keys):
     Examples
     --------
     ```python
+    from wadoh_raccoon.utils import helpers
+
     # Get a single secret
-    db_password = get_secrets("keyvault_url", "db-password")
+    db_password = helpers.get_secrets("keyvault_url", "db-password")
     
     # Get multiple secrets at once
-    username, password, api_key = get_secrets(
+    username, password, api_key = helpers.get_secrets(
         "keyvault_url",
         ["db-username", "db-password", "api-key"]
     )
