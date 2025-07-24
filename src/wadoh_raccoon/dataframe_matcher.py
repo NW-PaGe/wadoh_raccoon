@@ -128,7 +128,7 @@ class DataFrameMatcher:
         if param is None and (param_src is None or param_ref is None):
             raise ValueError(f"`{param_name}` or both `{param_name}_src` and `{param_name}_ref` must not be None")
 
-    def clean_all(self) -> pl.DataFrame:
+    def clean_all(self) -> (pl.DataFrame, pl.DataFrame):
 
         ref_prep = (
             self.__prep_df(
@@ -139,13 +139,13 @@ class DataFrameMatcher:
                 dob=self.dob_ref,
                 output_spec_col_name='reference_collection_date',
                 output_dob_name='reference_dob'
+            )
+            # Remove bad records
+            .filter(
+                (pl.col('first_name_clean').is_not_null()) &
+                (pl.col('last_name_clean').is_not_null())
+            )
         )
-        # Remove bad records
-        .filter(
-            (pl.col('first_name_clean').is_not_null()) &
-            (pl.col('last_name_clean').is_not_null())
-        )
-    )
 
         submissions_to_fuzzy_prep = (
             self.__prep_df(
@@ -161,7 +161,8 @@ class DataFrameMatcher:
 
         return ref_prep, submissions_to_fuzzy_prep
 
-    def filter_demo(self, submissions_to_fuzzy_prep):
+    @staticmethod
+    def filter_demo(submissions_to_fuzzy_prep) -> (pl.DataFrame, pl.DataFrame):
 
         # 2. Split by presence of demographics and specimen collection date
         fuzzy_with_demo = (
@@ -184,7 +185,7 @@ class DataFrameMatcher:
         return fuzzy_with_demo, fuzzy_without_demo
 
 
-    def find_exact_match(self, ref_prep, fuzzy_with_demo):
+    def find_exact_match(self, ref_prep, fuzzy_with_demo) -> (pl.DataFrame, pl.DataFrame):
 
         indicator = '___indicator___'  # Name for temp indicator col to determine join outcome
 
@@ -237,7 +238,7 @@ class DataFrameMatcher:
         return exact_match, dob_match
 
 
-    def fuzzy_match(self, exact_match, dob_match):
+    def fuzzy_match(self, exact_match, dob_match) -> (pl.DataFrame, pl.DataFrame, pl.DataFrame):
         """ 
 
         Where the magic happens. Do the fuzzy matching to the dataframe
@@ -292,7 +293,6 @@ class DataFrameMatcher:
         # ----- Init variables ----- # 
         fuzzy_review = pl.DataFrame()
         fuzzy_unmatched = pl.DataFrame()
-        fuzzy_matched = pl.DataFrame()
 
         # ------- Fuzzy Matching ------- #
 
@@ -423,11 +423,7 @@ class DataFrameMatcher:
         else: 
             fuzzy_matched = pl.DataFrame()
 
-        # breakpoint()
-
         return fuzzy_review, fuzzy_unmatched, fuzzy_matched
-    
-    # TODO: Full matching goes here?
 
     def fuzzZ(self, verbose=True):
         
