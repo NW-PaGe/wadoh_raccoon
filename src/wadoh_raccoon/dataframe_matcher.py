@@ -315,8 +315,8 @@ class DataFrameMatcher:
                         lambda cols: fuzz.ratio(cols['last_name_clean'],cols['last_name_clean_right']),
                         skip_nulls=False,
                         return_dtype=pl.Int64
-                    .alias('last_name_result'),
                     )
+                    .alias('last_name_result'),
 
                     # Now reverse - WDRS is known to switch first and last names
                     # First get the fuzz ratio with the first name
