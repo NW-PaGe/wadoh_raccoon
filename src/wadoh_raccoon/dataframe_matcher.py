@@ -117,8 +117,6 @@ class DataFrameMatcher:
                 temp_dob_col=helpers.date_format(df=df, col=dob)
             )
             .rename({"temp_spec_col": output_spec_col_name, "temp_dob_col": output_dob_name})
-            # now drop the original name columns to clean up the namespace
-            # .select(pl.exclude([first_name, last_name, spec_col_date, dob]))
         )
 
         return clean_df
@@ -296,14 +294,11 @@ class DataFrameMatcher:
 
         # ------- Fuzzy Matching ------- #
 
-        if dob_match.select(pl.len())[0,0] > 0:
+        if dob_match.height > 0:
             multiple_matches_ratios = (
                 dob_match
                 .lazy()
                 .with_columns(
-                
-                    # Get a name string for grouping
-                    pl.concat_str(pl.col('first_name_clean'),pl.col('last_name_clean')).alias('combined_name'),
 
                     # First get the fuzz ratio with the first name
                     pl.struct(['first_name_clean','first_name_clean_right'])
@@ -320,8 +315,8 @@ class DataFrameMatcher:
                         lambda cols: fuzz.ratio(cols['last_name_clean'],cols['last_name_clean_right']),
                         skip_nulls=False,
                         return_dtype=pl.Int64
-                        )
                     .alias('last_name_result'),
+                    )
 
                     # Now reverse - WDRS is known to switch first and last names
                     # First get the fuzz ratio with the first name
@@ -383,10 +378,6 @@ class DataFrameMatcher:
             temp_mult_matches = (
                 multiple_matches_ratios_final
                 .with_columns(
-                
-                    # Get a name string for grouping
-                    pl.concat_str(pl.col('first_name_clean'),pl.col('last_name_clean')).alias('combined_name'),
-
                     # Get a date range calculation of days between submitted collection date and collection date in WDRS
                     # date_difference.alias('date_difference')
                     business_day_count=pl.business_day_count("submitted_collection_date", "reference_collection_date"),
@@ -411,12 +402,12 @@ class DataFrameMatcher:
                 .unique(maintain_order=True)
             )
         
-        if fuzzy_review.select(pl.len())[0,0]==0:
+        if fuzzy_review.height==0:
             fuzzy_review = pl.DataFrame()
 
         # ------- Format Exact Matches ------- #
 
-        if exact_match.select(pl.len())[0,0] > 0:
+        if exact_match.height > 0:
             fuzzy_matched = (
                 exact_match
             )
