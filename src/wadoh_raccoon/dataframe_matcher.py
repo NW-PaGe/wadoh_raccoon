@@ -198,7 +198,6 @@ class DataFrameMatcher:
                 suffix="_em"
             )
             .with_columns(
-                date_subtract = (pl.col('submitted_collection_date') - pl.col('reference_collection_date'))
             )
             # for ones with multiple matches, pull the closest match based on collection date
             # .group_by(self.key)
