@@ -198,6 +198,7 @@ class DataFrameMatcher:
                 suffix="_em"
             )
             .with_columns(
+                date_subtract = (pl.col('submitted_collection_date') - pl.col('reference_collection_date')).abs()
             )
             # for ones with multiple matches, pull the closest match based on collection date
             # .group_by(self.key)
@@ -373,7 +374,7 @@ class DataFrameMatcher:
                 multiple_matches_ratios_final
                 .with_columns(
                     # Get a date range calculation of days between submitted collection date and ref collection date
-                    business_day_count=pl.business_day_count("submitted_collection_date", "reference_collection_date")
+                    business_day_count=pl.business_day_count("submitted_collection_date", "reference_collection_date").abs()
                 )
                 .group_by(pl.col(self.key))
                 .agg(pl.all().sort_by('business_day_count').first())
