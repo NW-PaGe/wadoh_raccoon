@@ -198,7 +198,7 @@ class DataFrameMatcher:
                 suffix="_em"
             )
             .with_columns(
-                date_subtract = (pl.col('submitted_collection_date') - pl.col('reference_collection_date'))
+                date_subtract = (pl.col('submitted_collection_date') - pl.col('reference_collection_date')).abs()
             )
             # for ones with multiple matches, pull the closest match based on collection date
             # .group_by(self.key)
@@ -345,70 +345,39 @@ class DataFrameMatcher:
                 )
                 .with_columns(
                     # Now get the ratios between first and last name matches
-                    # pl.struct(['first_name_result','last_name_result'])
-                    ((pl.col('first_name_result') + pl.col('last_name_result')) / 2).alias('match_ratio'),
-                    ((pl.col('reverse_first_name_result') + pl.col('reverse_last_name_result')) / 2).alias('reverse_match_ratio')
+                    pl.mean_horizontal('first_name_result', 'last_name_result').alias('match_ratio'),
+                    pl.mean_horizontal('reverse_first_name_result', 'reverse_last_name_result').alias(
+                        'reverse_match_ratio')
                 )
-                # Mark columns that have ratio > 90
-                .with_columns(
-                    pl.when(pl.col('match_ratio') >= self.threshold).then(1)
-                    .otherwise(0).alias('matched'),
-
-                    pl.when(pl.col('reverse_match_ratio') >= self.threshold).then(1)
-                    .otherwise(0).alias('reverse_matched')
-                )
-                
             ).collect()
 
-            # Get ones that matched on ratio > 90
-            multiple_matches_ratios_final = (
-                multiple_matches_ratios.filter((pl.col('matched') == 1) | (pl.col('reverse_matched') == 1))
+            # Get ones that matched on ratio >= threshold
+            multiple_matches_ratios_final = multiple_matches_ratios.filter(
+                pl.col('match_ratio').ge(self.threshold) | pl.col('reverse_match_ratio').ge(self.threshold)
             )
 
             # get all the matches above 60
             fuzzy_unmatched = (
                 multiple_matches_ratios
-                .filter((pl.col('matched') != 1) & (pl.col('reverse_matched') != 1))
-                # remove any that were already matched - the filter above will still include bad matches
+                # Remove any groups that had a match >= the threshold
                 .join(multiple_matches_ratios_final, on=self.key, how='anti')
-                .with_columns(
-                    pl.when((pl.col('match_ratio')>60) | (pl.col('reverse_match_ratio')>60)).then(1)
-                    .otherwise(0).alias('match_ratio_above_60'),
-
-                )
+                # Get the max between the two ratio methods
+                .with_columns(pl.max_horizontal('match_ratio', 'reverse_match_ratio').alias('max_ratio'))
+                # Select the match with the highest ratio within each group
                 .group_by(self.key)
-                .agg([pl.all().sort_by(['match_ratio_above_60'],descending=True).max()])
+                .agg(pl.all().sort_by('max_ratio', descending=True).first())
+                .drop('max_ratio')
             )
 
-            temp_mult_matches = (
+            # here we need to group by key and select row with the closest collection date difference
+            fuzzy_review = (
                 multiple_matches_ratios_final
                 .with_columns(
-                
-                    # Get a name string for grouping
-                    pl.concat_str(pl.col('first_name_clean'),pl.col('last_name_clean')).alias('combined_name'),
-
-                    # Get a date range calculation of days between submitted collection date and collection date in WDRS
-                    # date_difference.alias('date_difference')
-                    business_day_count=pl.business_day_count("submitted_collection_date", "reference_collection_date"),
-
+                    # Get a date range calculation of days between submitted collection date and ref collection date
+                    business_day_count=pl.business_day_count("submitted_collection_date", "reference_collection_date").abs()
                 )
-            )
-
-            # print(temp_mult_matches.columns)
-
-            # here we need to group by sub_number and select the closest collection date difference
-            # then join back to the temp_mult_matches df to get all the og columns
-            fuzzy_review = (
-                temp_mult_matches
                 .group_by(pl.col(self.key))
-                .agg(pl.col('business_day_count').min())
-
-                # join back to gett all original cols join_nulls=True is nulls_equal=True in newer Polars versions
-                # NOTE: you need the join_nulls or nulls_equal=True because if a record has missing ref_collection_date
-                # then this join WILL NOT work because business_day_count will be null. it will return a dataframe that has all nulls for all cols
-                .join(temp_mult_matches,on=[self.key, 'business_day_count'],how='left',join_nulls=True)
-                # often times subtypes have a ton of rows in WDRS, just take the unique ones
-                .unique(maintain_order=True)
+                .agg(pl.all().sort_by('business_day_count').first())
             )
         
         if fuzzy_review.select(pl.len())[0,0]==0:
