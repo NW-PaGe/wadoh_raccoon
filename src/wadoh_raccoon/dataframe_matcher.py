@@ -377,9 +377,6 @@ class DataFrameMatcher:
                 .group_by(pl.col(self.key))
                 .agg(pl.all().sort_by('business_day_count').first())
             )
-        
-        if fuzzy_matched.height==0:
-            fuzzy_matched = pl.DataFrame()
 
         return fuzzy_matched, fuzzy_unmatched
 
