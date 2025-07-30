@@ -235,123 +235,126 @@ class DataFrameMatcher:
 
         return exact_match, dob_match
 
+    def score(self, df):
+        return (
+            df
+            .with_columns(
 
-    def fuzzy_match(self, exact_match, dob_match) -> (pl.DataFrame, pl.DataFrame, pl.DataFrame):
+                # First get the fuzz ratio with the first name
+                pl.struct(['first_name_clean', 'first_name_clean_right'])
+                .map_elements(
+                    lambda cols: fuzz.ratio(cols['first_name_clean'], cols['first_name_clean_right']),
+                    skip_nulls=False,
+                    return_dtype=pl.Int64
+                )
+                .alias('first_name_result'),
+
+                # Now get the fuzz ratio with the last name
+                pl.struct(['last_name_clean', 'last_name_clean_right'])
+                .map_elements(
+                    lambda cols: fuzz.ratio(cols['last_name_clean'], cols['last_name_clean_right']),
+                    skip_nulls=False,
+                    return_dtype=pl.Int64
+                )
+                .alias('last_name_result'),
+
+                # Now reverse - WDRS is known to switch first and last names
+                # First get the fuzz ratio with the first name
+                pl.struct(['first_name_clean', 'last_name_clean_right'])
+                .map_elements(
+                    lambda cols: fuzz.ratio(cols['first_name_clean'], cols['last_name_clean_right']),
+                    skip_nulls=False,
+                    return_dtype=pl.Int64
+                )
+                .alias('reverse_first_name_result'),
+
+                # Now get the fuzz ratio with the last name
+                pl.struct(['last_name_clean', 'first_name_clean_right'])
+                .map_elements(
+                    lambda cols: fuzz.ratio(cols['last_name_clean'], cols['first_name_clean_right']),
+                    skip_nulls=False,
+                    return_dtype=pl.Int64
+                )
+                .alias('reverse_last_name_result'),
+
+            )
+            .with_columns(
+                # Now get the ratios between first and last name matches
+                pl.mean_horizontal('first_name_result', 'last_name_result').alias('match_ratio'),
+                pl.mean_horizontal('reverse_first_name_result', 'reverse_last_name_result').alias(
+                    'reverse_match_ratio')
+            )
+        )
+
+    def fuzzy_match(self, dob_match) -> (pl.DataFrame, pl.DataFrame):
         """ 
 
         Where the magic happens. Do the fuzzy matching to the dataframe
 
         Parameters
         ----------
-        exact_match: pl.DataFrame
-            the dataframe that has exact matches to the reference
         dob_match: pl.DataFrame
             the dataframe that has records grouped by their dob match
         
         Returns
         ----------
-        fuzzy_with_demo: pl.DataFrame
-            dataframe with all of first name, last name, and dob filled out
-        fuzzy_without_demo: pl.DataFrame
-            dataframe that has records with one of first name, last name, or dob missing
+        fuzzy_matched: pl.DataFrame
+            dataframe with matches that met or exceeded the fuzzy matching score threshold
+        fuzzy_unmatched: pl.DataFrame
+            dataframe with matches that failed to meet the fuzzy matching score threshold
         
         Examples
         --------
         ```{python}
-        # Not to be run like this
-        # Only for demonstration!!
+        from wadoh_racoon import dataframe_matcher as dfm
+        from datetime import date
 
-        submissions_to_fuzzy_df = instance._fuzzy_process__submissions_to_fuzzy()
-        ref, submissions_to_fuzzy_prep = instance._fuzzy_process__transform(submissions_to_fuzzy_df)
-        fuzzy_with_demo, fuzzy_without_demo = instance._fuzzy_process__filter_demo(submissions_to_fuzzy_prep)
-        exact_match, dob_match = instance._fuzzy_process__find_exact_match(ref,fuzzy_with_demo)
+        # Create example data
+        df = pl.DataFrame({
+            'submission_number': [453278555, 453278555, 887730141],
+            'first_name_clean': ['DAVIS', 'DAVIS', 'GRANT'],
+            'last_name_clean': ['SMITHDAVIS', 'SMITHDAVIS', 'MITHCELL'],
+            'submitted_collection_date': [date(2024, 11, 29), date(2024, 11, 29), date(2024, 12, 2)],
+            'submitted_dob': [date(1989, 7, 15), date(1989, 7, 15), date(1990, 6, 21)],
+             'CASE_ID': [100000032, 100000041, None],
+            'first_name_clean_right': ['DAVID', 'DAVID', None],
+            'last_name_clean_right': ['SMITDAVIS', 'SMITDAVIS', None],
+             'reference_collection_date': [date(2024, 11, 29), date(2024, 8, 31), None]
+        })
 
-        fuzzy_matched_review, fuzzy_matched_none, fuzzy_matched_roster = instance._fuzzy_process__fuzzy_match(exact_match, dob_match)
+        # Init dataframe matcher
+        # (this is not how to use the instance but input data not used in this example)
+        instance = dfm.DataFrameMatcher(df, df)
+        fuzzy_matched, fuzzy_unmatched = instance.fuzzy_match(dob_match=df)
         ```
         
         Fuzzy match found:
         ```{python}
-        helpers.gt_style(df_inp=fuzzy_matched_review)
+        helpers.gt_style(df_inp=fuzzy_matched)
         ```
-
 
         no matches found:
         ```{python}
         helpers.gt_style(df_inp=fuzzy_matched_none)
         ```
 
-        exact demographic matches:
-        ```{python}
-        helpers.gt_style(df_inp=fuzzy_matched_roster)
-        ```
-
-        
         """
 
-        # ----- Init variables ----- # 
-        fuzzy_review = pl.DataFrame()
+        # ----- Init variables ----- #
+        fuzzy_matched = pl.DataFrame()
         fuzzy_unmatched = pl.DataFrame()
 
         # ------- Fuzzy Matching ------- #
 
         if dob_match.height > 0:
-            multiple_matches_ratios = (
-                dob_match
-                .lazy()
-                .with_columns(
-
-                    # First get the fuzz ratio with the first name
-                    pl.struct(['first_name_clean','first_name_clean_right'])
-                    .map_elements(
-                        lambda cols: fuzz.ratio(cols['first_name_clean'],cols['first_name_clean_right']),
-                        skip_nulls=False,
-                        return_dtype=pl.Int64
-                    )
-                    .alias('first_name_result'),
-
-                    # Now get the fuzz ratio with the last name
-                    pl.struct(['last_name_clean','last_name_clean_right'])
-                    .map_elements(
-                        lambda cols: fuzz.ratio(cols['last_name_clean'],cols['last_name_clean_right']),
-                        skip_nulls=False,
-                        return_dtype=pl.Int64
-                    )
-                    .alias('last_name_result'),
-
-                    # Now reverse - WDRS is known to switch first and last names
-                    # First get the fuzz ratio with the first name
-                    pl.struct(['first_name_clean','last_name_clean_right'])
-                    .map_elements(
-                        lambda cols: fuzz.ratio(cols['first_name_clean'],cols['last_name_clean_right']),
-                        skip_nulls=False,
-                        return_dtype=pl.Int64
-                        )
-                    .alias('reverse_first_name_result'),
-
-                    # Now get the fuzz ratio with the last name
-                    pl.struct(['last_name_clean','first_name_clean_right'])
-                    .map_elements(
-                        lambda cols: fuzz.ratio(cols['last_name_clean'],cols['first_name_clean_right']),
-                        skip_nulls=False,
-                        return_dtype=pl.Int64
-                        )
-                    .alias('reverse_last_name_result'),
-
-                )
-                .with_columns(
-                    # Now get the ratios between first and last name matches
-                    pl.mean_horizontal('first_name_result', 'last_name_result').alias('match_ratio'),
-                    pl.mean_horizontal('reverse_first_name_result', 'reverse_last_name_result').alias(
-                        'reverse_match_ratio')
-                )
-            ).collect()
+            multiple_matches_ratios = self.score(dob_match.lazy()).collect()
 
             # Get ones that matched on ratio >= threshold
             multiple_matches_ratios_final = multiple_matches_ratios.filter(
                 pl.col('match_ratio').ge(self.threshold) | pl.col('reverse_match_ratio').ge(self.threshold)
             )
 
-            # get all the matches above 60
+            # get the top matches of the groups with no score meeting the threshold
             fuzzy_unmatched = (
                 multiple_matches_ratios
                 # Remove any groups that had a match >= the threshold
@@ -365,11 +368,9 @@ class DataFrameMatcher:
             )
 
             # here we need to group by key and select row with the closest collection date difference
-            fuzzy_review = (
+            fuzzy_matched = (
                 multiple_matches_ratios_final
                 .with_columns(
-                    # Get a date range calculation of days between submitted collection date and collection date in WDRS
-                    # date_difference.alias('date_difference')
                     # Get a date range calculation of days between submitted collection date and ref collection date
                     business_day_count=pl.business_day_count("submitted_collection_date", "reference_collection_date").abs()
                 )
@@ -377,19 +378,10 @@ class DataFrameMatcher:
                 .agg(pl.all().sort_by('business_day_count').first())
             )
         
-        if fuzzy_review.height==0:
-            fuzzy_review = pl.DataFrame()
-
-        # ------- Format Exact Matches ------- #
-
-        if exact_match.height > 0:
-            fuzzy_matched = (
-                exact_match
-            )
-        else: 
+        if fuzzy_matched.height==0:
             fuzzy_matched = pl.DataFrame()
 
-        return fuzzy_review, fuzzy_unmatched, fuzzy_matched
+        return fuzzy_matched, fuzzy_unmatched
 
     def fuzzZ(self, verbose=True):
         
@@ -398,12 +390,12 @@ class DataFrameMatcher:
         # Split by presence of demographics and specimen collection date
         fuzzy_with_demo, fuzzy_without_demo = self.filter_demo(submissions_to_fuzzy_prep)
         # find exact matches
-        exact_match, dob_match = self.find_exact_match(ref_prep, fuzzy_with_demo)
+        exact_matched, dob_match = self.find_exact_match(ref_prep, fuzzy_with_demo)
         # find fuzzy matches
-        fuzzy_review, fuzzy_unmatched, fuzzy_matched = self.fuzzy_match(exact_match, dob_match)
+        fuzzy_matched, fuzzy_unmatched = self.fuzzy_match(dob_match)
         # # print summary
         # if verbose:
         #     self.__output_summary(submissions_to_fuzzy_df, fuzzy_matched_review, fuzzy_without_demo, fuzzy_matched_none,
         #                fuzzy_matched_roster)
         # return fuzzy outputs
-        return fuzzy_matched, fuzzy_unmatched, exact_match, fuzzy_without_demo, fuzzy_review
+        return exact_matched, fuzzy_matched, fuzzy_unmatched, fuzzy_without_demo
