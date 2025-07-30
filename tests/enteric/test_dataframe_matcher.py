@@ -24,10 +24,10 @@ class TestDataFrameMatcher:
         return pl.read_parquet(match_to_test_df_path)
     
     @pytest.fixture
-    def exact_matched_exp_results_df(self):
+    def exact_match_exp_results_df(self):
         """Load the expected fuzzy_match() output from disk."""
-        exact_matched_exp_results_df_path = TEST_DATA_DIR / "exact_matched_exp_results_df.parquet"
-        return pl.read_parquet(exact_matched_exp_results_df_path)
+        exact_match_exp_results_df_path = TEST_DATA_DIR / "exact_match_exp_results_df.parquet"
+        return pl.read_parquet(exact_match_exp_results_df_path)
     
     @pytest.fixture
     def fuzzy_matched_exp_results_df(self):
@@ -91,6 +91,7 @@ class TestDataFrameMatcher:
     def test_fuzzy_match(self, 
                          fuzzy_match_test_df,
                          match_to_test_df,
+                         exact_match_exp_results_df,
                          fuzzy_matched_exp_results_df, 
                          fuzzy_unmatched_exp_results_df,
                          fuzzy_review_exp_results_df,
@@ -113,6 +114,7 @@ class TestDataFrameMatcher:
         # But the test expects fuzzy_matched_df, fuzzy_unmatched_df
         # Assuming the test wants to compare the main matched and unmatched results
         # Use the correct method to compare Polars DataFrames
+        assert exact_match.equals(exact_match_exp_results_df)
         assert fuzzy_matched.equals(fuzzy_matched_exp_results_df)
         assert fuzzy_unmatched.equals(fuzzy_unmatched_exp_results_df)
         assert fuzzy_review.equals(fuzzy_review_exp_results_df)
