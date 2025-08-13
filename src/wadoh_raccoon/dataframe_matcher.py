@@ -403,14 +403,14 @@ class DataFrameMatcher:
         # anti_join outputs to see if any data is missing from the outputs from the original df
         check_data_leaks = (
             submissions_to_fuzzy_df
-            .join(all_outputs, on="submission_number",how="anti")
+            .join(all_outputs, on=self.key,how="anti")
             .select(pl.len()).item()
         )
 
         # try the opposite anti join
         check_data_leaks_reverse = (
             all_outputs
-            .join(submissions_to_fuzzy_df, on="submission_number",how="anti")
+            .join(submissions_to_fuzzy_df, on=self.key,how="anti")
             .select(pl.len()).item()
         )
 
