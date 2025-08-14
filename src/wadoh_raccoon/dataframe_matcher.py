@@ -380,6 +380,71 @@ class DataFrameMatcher:
 
         return fuzzy_matched, fuzzy_unmatched
 
+    def __output_summary(
+        self,
+        fuzzy_matched_df,
+        fuzzy_unmatched_df,
+        fuzzy_without_demo_df,
+        exact_match_df,
+        submissions_to_fuzzy_df
+    ):
+
+        # First combine all outputs to check for any data leaks
+        all_outputs = pl.concat([
+                fuzzy_matched_df,
+                fuzzy_unmatched_df,
+                fuzzy_without_demo_df,
+                exact_match_df
+            ],
+            # diagnonal_relaxed means that it will concat even if col types are different
+            # it will convert the col types to be the same depending on the most frequent
+            how = "diagonal_relaxed")
+
+        # anti_join outputs to see if any data is missing from the outputs from the original df
+        check_data_leaks = (
+            submissions_to_fuzzy_df
+            .join(all_outputs, on=self.key,how="anti")
+            .select(pl.len()).item()
+        )
+
+        # try the opposite anti join
+        check_data_leaks_reverse = (
+            all_outputs
+            .join(submissions_to_fuzzy_df, on=self.key,how="anti")
+            .select(pl.len()).item()
+        )
+
+        # Output errors if any data leaks happen!
+        if check_data_leaks > 0 or check_data_leaks_reverse > 0:
+            print("ERROR!! Fuzzy data leaked. Data are in submissions_to_fuzzy_df that cannot be found in fuzzy outputs")
+            print("Total processed: ",
+                fuzzy_matched_df.shape[0] +
+                fuzzy_without_demo_df.shape[0] +
+                exact_match_df.shape[0] +
+                fuzzy_unmatched_df.shape[0],
+                "\nOriginal submissions to fuzzy (including no_match rematch attempt):",
+                submissions_to_fuzzy_df.shape[0]
+            )
+            raise pl.exceptions.PolarsError("ERROR!! Fuzzy data leaked. Data are in submissions_to_fuzzy_df that cannot be found in fuzzy outputs")
+        else:
+            print("Success: No data leaks detected. Insert victory cigar")
+
+        # ------ Results ------ #
+        print(exact_match_df.shape[0], "exact matches")
+        print(fuzzy_matched_df.shape[0], "fuzzy matched")
+        print(fuzzy_unmatched_df.shape[0], "no match found")
+        print(fuzzy_without_demo_df.shape[0], "records without demo\n")
+        
+
+        print("Total unique persons processed: ",
+            fuzzy_matched_df.shape[0] +
+            fuzzy_without_demo_df.shape[0] +
+            exact_match_df.shape[0] +
+            fuzzy_unmatched_df.shape[0],
+            "\nOriginal submissions to fuzzy (including no_match rematch attempt):",
+            submissions_to_fuzzy_df.shape[0]
+        )
+
     def fuzzZ(self, verbose=True):
         
         # Process the Submissions to Fuzzy
@@ -391,8 +456,12 @@ class DataFrameMatcher:
         # find fuzzy matches
         fuzzy_matched, fuzzy_unmatched = self.fuzzy_match(dob_match)
         # # print summary
-        # if verbose:
-        #     self.__output_summary(submissions_to_fuzzy_df, fuzzy_matched_review, fuzzy_without_demo, fuzzy_matched_none,
-        #                fuzzy_matched_roster)
-        # return fuzzy outputs
+        if verbose:
+            self.__output_summary(
+                fuzzy_matched_df=fuzzy_matched, 
+                fuzzy_unmatched_df=fuzzy_unmatched, 
+                submissions_to_fuzzy_df=submissions_to_fuzzy_prep,
+                fuzzy_without_demo_df=fuzzy_without_demo,
+                exact_match_df=exact_matched
+            )
         return exact_matched, fuzzy_matched, fuzzy_unmatched, fuzzy_without_demo
