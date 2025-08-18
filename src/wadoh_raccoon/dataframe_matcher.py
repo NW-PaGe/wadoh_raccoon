@@ -1,6 +1,19 @@
 import polars as pl
 from thefuzz import fuzz
+from pydantic import BaseModel
 from wadoh_raccoon.utils import helpers
+
+
+class DataFrameMatcherResults(BaseModel):
+    exact_matched: pl.DataFrame
+    fuzzy_matched: pl.DataFrame
+    fuzzy_unmatched: pl.DataFrame
+    no_demo: pl.DataFrame
+
+    # Required when using polars dataframes
+    model_config = {
+        'arbitrary_types_allowed': True
+    }
 
 
 class DataFrameMatcher:
@@ -235,7 +248,8 @@ class DataFrameMatcher:
 
         return exact_match, dob_match
 
-    def score(self, df):
+    @staticmethod
+    def score(df):
         return (
             df
             .with_columns(
@@ -445,7 +459,7 @@ class DataFrameMatcher:
             submissions_to_fuzzy_df.shape[0]
         )
 
-    def fuzzZ(self, verbose=True):
+    def match(self, verbose=True):
         
         # Process the Submissions to Fuzzy
         ref_prep, submissions_to_fuzzy_prep = self.clean_all()
@@ -455,7 +469,7 @@ class DataFrameMatcher:
         exact_matched, dob_match = self.find_exact_match(ref_prep, fuzzy_with_demo)
         # find fuzzy matches
         fuzzy_matched, fuzzy_unmatched = self.fuzzy_match(dob_match)
-        # # print summary
+        # print summary
         if verbose:
             self.__output_summary(
                 fuzzy_matched_df=fuzzy_matched, 
@@ -464,4 +478,10 @@ class DataFrameMatcher:
                 fuzzy_without_demo_df=fuzzy_without_demo,
                 exact_match_df=exact_matched
             )
-        return exact_matched, fuzzy_matched, fuzzy_unmatched, fuzzy_without_demo
+
+        return DataFrameMatcherResults(
+            exact_matched=exact_matched,
+            fuzzy_matched=fuzzy_matched,
+            fuzzy_unmatched=fuzzy_unmatched,
+            no_demo=fuzzy_without_demo
+        )
