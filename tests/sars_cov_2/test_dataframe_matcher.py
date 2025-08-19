@@ -28,25 +28,25 @@ class TestDataFrameMatcher:
 
     @pytest.fixture
     def exact_matched_test_exp_results_df(self):
-        """Load the expected fuzzy_match() output from disk."""
+        """Load the expected exact match output from disk."""
         exact_matched_test_exp_results_df_path = TEST_DATA_DIR / "exact_matched_test_exp_results_df.parquet"
         return pl.read_parquet(exact_matched_test_exp_results_df_path)
 
     @pytest.fixture
     def fuzzy_matched_test_exp_results_df(self):
-        """Load the expected fuzzy_match() output from disk."""
+        """Load the expected fuzzy match output from disk."""
         fuzzy_matched_test_exp_results_df_path = TEST_DATA_DIR / "fuzzy_matched_test_exp_results_df.parquet"
         return pl.read_parquet(fuzzy_matched_test_exp_results_df_path)
 
     @pytest.fixture
     def fuzzy_unmatched_test_exp_results_df(self):
-        """Load the expected fuzzy_match() output from disk."""
+        """Load the expected fuzzy unmatch output from disk."""
         fuzzy_unmatched_test_exp_results_df_path = TEST_DATA_DIR / "fuzzy_unmatched_test_exp_results_df.parquet"
         return pl.read_parquet(fuzzy_unmatched_test_exp_results_df_path)
 
     @pytest.fixture
     def no_demo_test_exp_results_df(self):
-        """Load the expected fuzzy_match() output from disk."""
+        """Load the expected no demo output from disk."""
         no_demo_test_exp_results_df_path = TEST_DATA_DIR / "no_demo_test_exp_results_df.parquet"
         return pl.read_parquet(no_demo_test_exp_results_df_path)
 
