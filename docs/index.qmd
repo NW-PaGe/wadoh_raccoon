@@ -46,6 +46,33 @@ A Python package for transforming and linking pathogen sequencing/subtyping meta
 :::
 
 <br>
+<br>
+
+:::{.column-page}
+
+## Installation {{< bi file-earmark-arrow-down-fill >}}
+
+:::{.panel-tabset}
+
+### install
+
+```python
+uv pip install git+https://github.com/NW-PaGe/wadoh_raccoon.git#egg=wadoh_raccoon
+```
+
+### install specific version
+
+To install a specific version, find the git tag noted in the GitHub Release section (something like v0.2.5) and then put it in the install statement like .git@v0.2.5:
+
+```python
+uv pip install git+https://github.com/NW-PaGe/wadoh_raccoon.git@v0.2.5#egg=wadoh_raccoon
+```
+
+:::
+
+:::
+
+<br>
 
 :::{.column-page}
 
@@ -356,7 +383,7 @@ df = pl.DataFrame({
 })
 
 # apply the function
-df.with_columns(new_date=helpers.date_format('old_date'))
+df.with_columns(new_date=helpers.date_format(df=df,col='old_date'))
 
 ```
 
@@ -365,7 +392,7 @@ df.with_columns(new_date=helpers.date_format('old_date'))
 helpers.gt_style(
     df
     .with_columns(
-        new_date=helpers.date_format('old_date')
+        new_date=helpers.date_format(df=df,col='old_date')
     )
 )
 ```
@@ -381,8 +408,6 @@ helpers.gt_style(
 ## Try It Yourself
 
 ```{pyodide}
-# import micropip as mp
-# await mp.install('wadoh_raccoon')
 import wadoh_raccoon as tp
 import wadoh_raccoon.utils.helpers as helpers
 import polars as pl
@@ -400,38 +425,13 @@ df = pl.DataFrame({
 helpers.gt_style(
     df
     .with_columns(
-        new_date=helpers.date_format('old_date')
+        new_date=helpers.date_format(df=df,col='old_date')
     )
 )
 
 ```
 
 ::::
-
-
-:::{.column-page}
-
-## Installation {{< bi file-earmark-arrow-down-fill >}}
-
-:::{.panel-tabset}
-
-### install
-
-```python
-uv pip install git+https://github.com/NW-PaGe/wadoh_raccoon.git#egg=wadoh_raccoon
-```
-
-### install specific version
-
-To install a specific version, find the git tag noted in the GitHub Release section (something like v0.2.5) and then put it in the install statement like .git@v0.2.5:
-
-```python
-uv pip install git+https://github.com/NW-PaGe/wadoh_raccoon.git@v0.2.5#egg=wadoh_raccoon
-```
-
-:::
-
-:::
 
 
 :::{.column-page}

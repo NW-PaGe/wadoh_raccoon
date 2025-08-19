@@ -33,6 +33,10 @@ quartodoc:
       contents:
         - helpers
         - azure
+    - title: Matching
+      desc: functions for record matching
+      contents:
+        - dataframe_matcher
 
 website:
   title: wadoh_raccoon

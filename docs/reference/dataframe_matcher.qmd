@@ -1,0 +1,109 @@
+# dataframe_matcher { #wadoh_raccoon.dataframe_matcher }
+
+`dataframe_matcher`
+
+
+
+## Classes
+
+| Name | Description |
+| --- | --- |
+| [DataFrameMatcher](#wadoh_raccoon.dataframe_matcher.DataFrameMatcher) | A utility class for matching records. |
+
+### DataFrameMatcher { #wadoh_raccoon.dataframe_matcher.DataFrameMatcher }
+
+```python
+dataframe_matcher.DataFrameMatcher(
+    self,
+    df_subm: pl.DataFrame,
+    df_ref: pl.DataFrame,
+    threshold: int | float = 80,
+    first_name: str | None = None,
+    last_name: str | None = None,
+    dob: str | None = None,
+    spec_col_date: str | None = None,
+    first_name_src: str | None = None,
+    last_name_src: str | None = None,
+    dob_src: str | None = None,
+    spec_col_date_src: str | None = None,
+    first_name_ref: str | None = None,
+    last_name_ref: str | None = None,
+    dob_ref: str | None = None,
+    spec_col_date_ref: str | None = None,
+    key: str | None = None,
+)
+```
+
+A utility class for matching records.
+
+This class provides functionality to match submissions to cases (epi 
+data) based on exact matching via accessions or fuzzy matching based on
+patient demographics.
+
+{{< include ../_matching.qmd >}}
+
+#### Methods
+
+| Name | Description |
+| --- | --- |
+| [fuzzy_match](#wadoh_raccoon.dataframe_matcher.DataFrameMatcher.fuzzy_match) | Where the magic happens. Do the fuzzy matching to the dataframe |
+
+##### fuzzy_match { #wadoh_raccoon.dataframe_matcher.DataFrameMatcher.fuzzy_match }
+
+```python
+dataframe_matcher.DataFrameMatcher.fuzzy_match(dob_match)
+```
+
+Where the magic happens. Do the fuzzy matching to the dataframe
+
+###### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**dob_match**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   the dataframe that has records grouped by their dob match
+
+###### Returns {.doc-section .doc-section-returns}
+
+<code>[**fuzzy_matched**]{.parameter-name} [:]{.parameter-annotation-sep} [pl.DataFrame]{.parameter-annotation}</code>
+
+:   dataframe with matches that met or exceeded the fuzzy matching score threshold
+
+<code>[**fuzzy_unmatched**]{.parameter-name} [:]{.parameter-annotation-sep} [pl.DataFrame]{.parameter-annotation}</code>
+
+:   dataframe with matches that failed to meet the fuzzy matching score threshold
+
+###### Examples {.doc-section .doc-section-examples}
+
+```python
+from wadoh_raccoon import dataframe_matcher as dfm
+import polars as pl
+from datetime import date
+
+# Create example data
+df = pl.DataFrame({
+    'submission_number': [453278555, 453278555, 887730141],
+    'first_name_clean': ['DAVIS', 'DAVIS', 'GRANT'],
+    'last_name_clean': ['SMITHDAVIS', 'SMITHDAVIS', 'MITHCELL'],
+    'submitted_collection_date': [date(2024, 11, 29), date(2024, 11, 29), date(2024, 12, 2)],
+    'submitted_dob': [date(1989, 7, 15), date(1989, 7, 15), date(1990, 6, 21)],
+     'CASE_ID': [100000032, 100000041, None],
+    'first_name_clean_right': ['DAVID', 'DAVID', None],
+    'last_name_clean_right': ['SMITDAVIS', 'SMITDAVIS', None],
+     'reference_collection_date': [date(2024, 11, 29), date(2024, 8, 31), None]
+})
+
+# Init dataframe matcher
+# (this is not how to use the instance but input data not used in this example)
+instance = dfm.DataFrameMatcher(df, df)
+fuzzy_matched, fuzzy_unmatched = instance.fuzzy_match(dob_match=df)
+```
+
+Fuzzy match found:
+```python
+helpers.gt_style(df_inp=fuzzy_matched)
+```
+
+no matches found:
+```python
+helpers.gt_style(df_inp=fuzzy_matched_none)
+```
