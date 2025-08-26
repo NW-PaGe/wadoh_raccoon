@@ -8,9 +8,64 @@
 
 | Name | Description |
 | --- | --- |
+| [__delete](#src.wadoh_raccoon.utils.azure.__delete) | Delete |
 | [blob_delete](#src.wadoh_raccoon.utils.azure.blob_delete) | Blob Delete |
 | [blob_download](#src.wadoh_raccoon.utils.azure.blob_download) | Downloads a specific file from Azure Blob Storage to a local directory. |
 | [blob_upload](#src.wadoh_raccoon.utils.azure.blob_upload) | Blob Upload |
+
+### __delete { #src.wadoh_raccoon.utils.azure.__delete }
+
+```python
+wadoh_raccoon.utils.azure.__delete(
+    client: ContainerClient,
+    blob_path: str,
+    recursive: bool = False,
+)
+```
+
+Delete
+Deletes blobs from the specified directory in Azure Blob Storage.
+
+#### Usage {.doc-section .doc-section-usage}
+
+This is a private function utilize by `blob_delete` and should not be called outside of that scope.
+This method can be used to upload a file from a local machine to Azure blob storage.
+This private helper method is designed to iterate through blobs within a given directory
+(`blob_path`) in Azure Blob Storage. It deletes blobs one by one, and if a subdirectory is
+found and the `recursive` flag is set to True, it continues the deletion process for that
+subdirectory.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**client**]{.parameter-name} [:]{.parameter-annotation-sep} [ContainerClient]{.parameter-annotation}</code>
+
+:   The Azure Blob Storage container client used to interact with the blob container.
+
+<code>[**blob_path**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   The path to the directory (blob) to delete from. This can be a directory or a specific blob.
+
+<code>[**recursive**]{.parameter-name} [:]{.parameter-annotation-sep} [bool]{.parameter-annotation} [ = ]{.parameter-default-sep} [False]{.parameter-default}</code>
+
+:   If True, subdirectories within the `blob_path` will also be processed and deleted. Defaults to False.
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[**None**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   This method performs deletions and prints the results but does not return any value.
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+from wadoh_raccoon.utils.azure import __delete
+
+# Delete a specific blob:
+__delete(client=container_client, blob_path="blob/to_delete/data.csv")
+
+# Delete a blob from a directory and any blobs in subdirectories:
+__delete(client=container_client, blob_path="blob/to_delete", recursive=True)
+```
 
 ### blob_delete { #src.wadoh_raccoon.utils.azure.blob_delete }
 

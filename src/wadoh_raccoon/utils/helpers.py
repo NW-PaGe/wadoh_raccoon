@@ -12,12 +12,13 @@ def clean_name(col: str) -> pl.Expr:
 
     Parameters
     ----------
-    name (str):
+    col: str
         Name of column to clean
 
     Returns
     -------
-    pl.Expr
+    pl.Expr:
+        a column of uppercase, non-alpha character, non-whitespace strings
 
     Examples
     --------
@@ -149,7 +150,7 @@ def get_secrets(vault, keys):
     
     Parameters
     ----------
-    vault_url: str
+    vault: str
         Key vault url.
     keys: str or list of str
         A single secret key or list of secret keys.
