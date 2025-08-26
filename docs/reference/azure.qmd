@@ -1,0 +1,281 @@
+# azure { #src.wadoh_raccoon.utils.azure }
+
+`wadoh_raccoon.utils.azure`
+
+
+
+## Functions
+
+| Name | Description |
+| --- | --- |
+| [__delete](#src.wadoh_raccoon.utils.azure.__delete) | Delete |
+| [blob_delete](#src.wadoh_raccoon.utils.azure.blob_delete) | Blob Delete |
+| [blob_download](#src.wadoh_raccoon.utils.azure.blob_download) | Downloads a specific file from Azure Blob Storage to a local directory. |
+| [blob_upload](#src.wadoh_raccoon.utils.azure.blob_upload) | Blob Upload |
+
+### __delete { #src.wadoh_raccoon.utils.azure.__delete }
+
+```python
+wadoh_raccoon.utils.azure.__delete(
+    client: ContainerClient,
+    blob_path: str,
+    recursive: bool = False,
+)
+```
+
+Delete
+Deletes blobs from the specified directory in Azure Blob Storage.
+
+#### Usage {.doc-section .doc-section-usage}
+
+This is a private function utilize by `blob_delete` and should not be called outside of that scope.
+This method can be used to upload a file from a local machine to Azure blob storage.
+This private helper method is designed to iterate through blobs within a given directory
+(`blob_path`) in Azure Blob Storage. It deletes blobs one by one, and if a subdirectory is
+found and the `recursive` flag is set to True, it continues the deletion process for that
+subdirectory.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**client**]{.parameter-name} [:]{.parameter-annotation-sep} [ContainerClient]{.parameter-annotation}</code>
+
+:   The Azure Blob Storage container client used to interact with the blob container.
+
+<code>[**blob_path**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   The path to the directory (blob) to delete from. This can be a directory or a specific blob.
+
+<code>[**recursive**]{.parameter-name} [:]{.parameter-annotation-sep} [bool]{.parameter-annotation} [ = ]{.parameter-default-sep} [False]{.parameter-default}</code>
+
+:   If True, subdirectories within the `blob_path` will also be processed and deleted. Defaults to False.
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[**None**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   This method performs deletions and prints the results but does not return any value.
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+from wadoh_raccoon.utils.azure import __delete
+
+# Delete a specific blob:
+__delete(client=container_client, blob_path="blob/to_delete/data.csv")
+
+# Delete a blob from a directory and any blobs in subdirectories:
+__delete(client=container_client, blob_path="blob/to_delete", recursive=True)
+```
+
+### blob_delete { #src.wadoh_raccoon.utils.azure.blob_delete }
+
+```python
+wadoh_raccoon.utils.azure.blob_delete(
+    account: str,
+    container_name: str,
+    blob_path: str,
+    credential: TokenCredential = None,
+    recursive: bool = False,
+    account_is_url: bool = False,
+)
+```
+
+Blob Delete
+Deletes a specific file or all files within a directory in Azure Blob Storage.
+
+#### Usage {.doc-section .doc-section-usage}
+
+This method establishes a connection to the specified Azure Blob Storage container and
+deletes either a specific file or all files within a given directory. If the `recursive` 
+flag is set to True, it will delete files from subdirectories as well.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**account**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   the storage account name.
+
+<code>[**container_name**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   the storage container name.
+
+<code>[**blob_path**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   The directory (or blob) path from which files are to be deleted. This should be a directory path if deleting multiple files.
+
+<code>[**credential**]{.parameter-name} [:]{.parameter-annotation-sep} [TokenCredential]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
+
+:   The Azure credential used for authentication. Can be any implementation of `azure.core.credentials.TokenCredential` (e.g., `DefaultAzureCredential`, `AzureCliCredential`, `ManagedIdentityCredential`). Defaults to `AzureCliCredential`.
+
+<code>[**recursive**]{.parameter-name} [:]{.parameter-annotation-sep} [bool]{.parameter-annotation} [ = ]{.parameter-default-sep} [False]{.parameter-default}</code>
+
+:   If True, all files within subdirectories of `blob_path` will also be deleted. Defaults to False.
+
+<code>[**account_is_url**]{.parameter-name} [:]{.parameter-annotation-sep} [bool]{.parameter-annotation} [ = ]{.parameter-default-sep} [False]{.parameter-default}</code>
+
+:   Whether `account` is supplied as a full URL instead of an account name. Account URLs will be set as the account endpoint as-is, and should be used for testing with Azurite, for example. Account names can be supplied with this flag set to False, and will be constructed to a full URL in the form of `https://{account}.blob.core.windows.net`. Defaults to False.
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[**None**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   This method deletes the specified file or directory contents and prints results, but does not return any value.
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+from wadoh_raccoon.utils.azure import blob_delete
+
+# Delete a specific blob file:
+blob_delete(account="myaccount",
+            container_name="mycontainer",
+            blob_path="blob/to_delete/data.txt")
+
+# Delete files within a directory and any files in subdirectories:
+blob_delete(account="myaccount",
+            container_name="mycontainer",
+            blob_path="blob/to_delete/",
+            recursive=True)
+```
+
+### blob_download { #src.wadoh_raccoon.utils.azure.blob_download }
+
+```python
+wadoh_raccoon.utils.azure.blob_download(
+    account: str,
+    container_name: str,
+    blob_path: str,
+    file_path: str,
+    credential: TokenCredential = None,
+    account_is_url: bool = False,
+)
+```
+
+Downloads a specific file from Azure Blob Storage to a local directory.
+
+#### Usage {.doc-section .doc-section-usage}
+
+This method authenticates with Azure using the Azure CLI, establishes a connection to the
+specified Azure Blob Storage container, and downloads a specific file from a given directory in
+Azure Blob Storage.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**account**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   The storage account name.
+
+<code>[**container_name**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   The storage container name.
+
+<code>[**blob_path**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   The blob path and name in Azure Blob Storage.
+
+<code>[**file_path**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   The local path and name where the file will be saved. The path must exist or will be created automatically.
+
+<code>[**credential**]{.parameter-name} [:]{.parameter-annotation-sep} [TokenCredential]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
+
+:   The Azure credential used for authentication. Can be any implementation of `azure.core.credentials.TokenCredential` (e.g., `DefaultAzureCredential`, `AzureCliCredential`, `ManagedIdentityCredential`). Defaults to `AzureCliCredential`.
+
+<code>[**account_is_url**]{.parameter-name} [:]{.parameter-annotation-sep} [bool]{.parameter-annotation} [ = ]{.parameter-default-sep} [False]{.parameter-default}</code>
+
+:   Whether `account` is supplied as a full URL instead of an account name. Account URLs will be set as the account endpoint as-is, and should be used for testing with Azurite, for example. Account names can be supplied with this flag set to False, and will be constructed to a full URL in the form of `https://{account}.blob.core.windows.net`. Defaults to False.
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[**None**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   This method downloads the specified file from Azure Blob Storage to the local machine and prints the result, but does not return any value.
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+from wadoh_raccoon.utils.azure import blob_download
+
+# Download a specific file from Azure Blob Storage:
+blob_download(account="myaccount",
+            container_name="mycontainer",
+            blob_path="blob/to_download/data.json",
+            file_path="data/data.json")
+```
+
+### blob_upload { #src.wadoh_raccoon.utils.azure.blob_upload }
+
+```python
+wadoh_raccoon.utils.azure.blob_upload(
+    account: str,
+    container_name: str,
+    blob_path: str,
+    file_path: str,
+    credential: TokenCredential = None,
+    overwrite: bool = True,
+    access_tier: str = None,
+    account_is_url: bool = False,
+)
+```
+
+Blob Upload
+Uploads a local file to Azure Blob Storage.
+
+#### Usage {.doc-section .doc-section-usage}
+
+This method can be used to upload a file from a specified local directory (`file_path`) into Azure blob storage
+at the specified blob location (`blob_path`).
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**account**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   the storage account name.
+
+<code>[**container_name**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   the storage container name.
+
+<code>[**blob_path**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   The path and name of the blob to be created in Azure Blob Storage.
+
+<code>[**file_path**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   The path and name of the file to upload.
+
+<code>[**credential**]{.parameter-name} [:]{.parameter-annotation-sep} [TokenCredential]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
+
+:   The Azure credential used for authentication. Can be any implementation of `azure.core.credentials.TokenCredential` (e.g., `DefaultAzureCredential`, `AzureCliCredential`, `ManagedIdentityCredential`). Defaults to `AzureCliCredential`.
+
+<code>[**overwrite**]{.parameter-name} [:]{.parameter-annotation-sep} [bool]{.parameter-annotation} [ = ]{.parameter-default-sep} [True]{.parameter-default}</code>
+
+:   Whether blobs should be overwritten if they exist. Defaults to True.
+
+<code>[**access_tier**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
+
+:   The access tier for the blob ('Hot', 'Cool', 'Cold' or 'Archive'). Defaults to container's default access tier.
+
+<code>[**account_is_url**]{.parameter-name} [:]{.parameter-annotation-sep} [bool]{.parameter-annotation} [ = ]{.parameter-default-sep} [False]{.parameter-default}</code>
+
+:   Whether `account` is supplied as a full URL instead of an account name. Account URLs will be set as the account endpoint as-is, and should be used for testing with Azurite, for example. Account names can be supplied with this flag set to False, and will be constructed to a full URL in the form of `https://{account}.blob.core.windows.net`. Defaults to False.
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[**None**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   This method uploads the specified file to Azure Blob Storage and prints the result. No value is returned.
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+from wadoh_raccoon.utils.azure import blob_upload
+
+# Upload a file from a local directory to the blob storage:
+blob_upload(
+    account="mystorageaccount",
+    container_name="mycontainer",
+    file_path="data.csv",
+    blob_path="myblob/blob_data.csv"
+)
+```

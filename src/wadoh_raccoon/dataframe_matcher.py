@@ -22,7 +22,124 @@ class DataFrameMatcher:
 
     This class provides functionality to match submissions to cases (epi 
     data) based on exact matching via accessions or fuzzy matching based on
-    patient demographics.
+    patient demographics
+
+    Parameters
+    -----------
+    df_subm: pl.DataFrame 
+        Submissions dataframe containing Key(s), patient demographics (if available), and the submission data.
+    df_ref: pl.DataFrame 
+        reference queried dataframe with CASE_ID, columns potentially containing the key, patient demographics. 
+    first_name_ref: str
+        first name column from reference_df
+    last_name_ref: str
+        last name column from reference_df
+    dob_ref: str
+        dob column from reference_df
+    spec_col_date_ref: str
+        specimen collection date column name in reference_df
+    first_name_src: str
+        first name column
+    last_name_src: str
+        last name column
+    dob_src: str
+        last name column
+    spec_col_date_src: str
+        specimen collection date column name in submissions_df
+
+
+    Returns
+    -------
+    fuzzy_matched_review: pl.DataFrame
+        records that successfully fuzzy matched (still send to be reviewed)
+    fuzzy_without_demo: pl.DataFrame
+        records missing demographics and can't be matched
+    fuzzy_matched_none: pl.DataFrame
+        records that did not have any match
+    fuzzy_matched_roster: pl.DataFrame
+        records that had an exact match to reference dataframe
+
+    Examples
+    --------
+
+
+    **Step 1:** Import the packages:
+    ```{python}
+    from wadoh_raccoon import dataframe_matcher as dfm
+    import polars as pl
+    from datetime import date
+
+    ```
+
+    **Step 2:** The fuzzy matching functions need two dataframes to match. Bring your dataframe and the reference dataframe:
+    ```{python}
+    # Create example data
+    your_df = pl.DataFrame({
+        'submission_number': [453278555, 453278555, 887730141],
+        'first_name': ['DAVIS', 'DAVIS', 'GRANT'],
+        'last_name': ['SMITHDAVIS', 'SMITHDAVIS', 'MITHCELL'],
+        'sub_collection_date': [date(2024, 11, 29), date(2024, 11, 29), date(2024, 12, 2)],
+        'sub_dob': [date(1989, 7, 15), date(1989, 7, 15), date(1990, 6, 21)]
+    })
+
+    reference_df = pl.DataFrame({
+        'CASE_ID': [100000032, 100000041, 100020000],
+        'first_name_reference': ['DAVID', 'DAVID', 'TRASH'],
+        'last_name_reference': ['SMITDAVIS', 'SMITDAVIS', 'PANDA'],
+        'ref_collection_date': [date(2024, 11, 29), date(2024, 8, 31), date(2024, 8, 31)],
+        'ref_dob': [date(1989, 7, 15), date(1989, 7, 15), date(1990, 6, 21)]
+    })
+    ```
+
+    **Step 3:** Initalize the fuzzy matching class and input which dataframes and columns you are matching on
+    ```{python}
+    fuzzy_init = dfm.DataFrameMatcher(
+        df_subm=your_df,
+        df_ref=reference_df,
+        first_name_ref='first_name_reference',
+        last_name_ref='last_name_reference',
+        dob_ref='ref_dob',
+        spec_col_date_ref='ref_collection_date',
+        first_name_src='first_name',
+        last_name_src='last_name',
+        dob_src='sub_dob',
+        spec_col_date_src='sub_collection_date',
+        key='submission_number',
+        threshold=80 # set what kind of fuzzy threshold you want, 100 being exact match
+    )
+    ```
+
+    **Step 4:** Run fuzzy matching! This will output data on what matched and what didn't match.
+
+    ```{python}
+    #| class-output: box
+    result = fuzzy_init.match()
+    ```
+
+    You can also examine the output dataframes by pulling them out of the result class, like this:
+
+
+    ```python
+    result.fuzzy_unmatched
+    ```
+    ```{python}
+    #| echo: false
+    from wadoh_raccoon.utils import helpers
+    helpers.gt_style(df_inp=result.fuzzy_unmatched)
+    ```
+
+    ```python
+    result.fuzzy_matched
+    ```
+    ```{python}
+    #| echo: false
+    from wadoh_raccoon.utils import helpers
+    helpers.gt_style(df_inp=result.fuzzy_matched)
+    ```
+    <br>
+    <br>
+    <br>
+
     """
 
     def __init__(
@@ -48,23 +165,6 @@ class DataFrameMatcher:
 
         key: str | None = None
         ):
-        """
-        Initialize the DataFrameMatcher with two dataframes.
-
-        Parameters:
-        -----------
-        df_subm (pl.DataFrame): 
-            Submissions dataframe containing Key(s), patient demographics (if
-            available), and the submission data.
-        
-        df_wdrs (pl.DataFrame): 
-            WDRS queried dataframe with CASE_ID, columns potentially containing 
-            the key, patient demographics. 
-
-        Returns:
-        --------
-        None
-        """
 
         # Check col name param sets
         self.__demo_param_checker(first_name, first_name_ref, first_name_src, "first_name")
@@ -311,7 +411,7 @@ class DataFrameMatcher:
             the dataframe that has records grouped by their dob match
         
         Returns
-        ----------
+        -------
         fuzzy_matched: pl.DataFrame
             dataframe with matches that met or exceeded the fuzzy matching score threshold
         fuzzy_unmatched: pl.DataFrame
@@ -319,8 +419,10 @@ class DataFrameMatcher:
         
         Examples
         --------
-        ```{python}
-        from wadoh_racoon import dataframe_matcher as dfm
+        
+        ```python
+        from wadoh_raccoon import dataframe_matcher as dfm
+        import polars as pl
         from datetime import date
 
         # Create example data
@@ -343,12 +445,12 @@ class DataFrameMatcher:
         ```
         
         Fuzzy match found:
-        ```{python}
+        ```python
         helpers.gt_style(df_inp=fuzzy_matched)
         ```
 
         no matches found:
-        ```{python}
+        ```python
         helpers.gt_style(df_inp=fuzzy_matched_none)
         ```
 

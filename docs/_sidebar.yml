@@ -4,6 +4,10 @@ website:
     - reference/index.qmd
     - contents:
       - reference/helpers.qmd
+      - reference/azure.qmd
       section: Functions
+    - contents:
+      - reference/dataframe_matcher.qmd
+      section: Matching
     id: reference
   - id: dummy-sidebar

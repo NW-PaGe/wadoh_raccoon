@@ -9,8 +9,8 @@ metadata-files:
 quartodoc:
   # the name used to import the package you want to create reference docs for
   package: wadoh_raccoon
-  # options:
-  #   include_private: true
+  options:
+    include_private: true
   dir: reference
   source_dir: ../
   # change parameter descriptions to a list and not a table
@@ -33,6 +33,10 @@ quartodoc:
       contents:
         - helpers
         - azure
+    - title: Matching
+      desc: functions for record matching
+      contents:
+        - dataframe_matcher
 
 website:
   title: wadoh_raccoon
