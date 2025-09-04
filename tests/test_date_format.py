@@ -33,7 +33,7 @@ def get_df():
     df_output = (
         df
         .with_columns(
-            output_date = helpers.date_format('date')
+            output_date = helpers.date_format(df=df,col='date')
         )
         .select('output_date')
     )
