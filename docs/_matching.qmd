@@ -1,0 +1,67 @@
+
+Examples
+--------
+
+
+**Step 1:** Import the packages:
+```{python}
+from wadoh_raccoon import dataframe_matcher as dfm
+import polars as pl
+from datetime import date
+
+```
+
+**Step 2:** The fuzzy matching functions need two dataframes to match. Bring your dataframe and the reference dataframe:
+```{python}
+# Create example data
+your_df = pl.DataFrame({
+    'submission_number': [453278555, 453278555, 887730141],
+    'first_name': ['DAVIS', 'DAVIS', 'GRANT'],
+    'last_name': ['SMITHDAVIS', 'SMITHDAVIS', 'MITHCELL'],
+    'sub_collection_date': [date(2024, 11, 29), date(2024, 11, 29), date(2024, 12, 2)],
+    'sub_dob': [date(1989, 7, 15), date(1989, 7, 15), date(1990, 6, 21)]
+})
+
+reference_df = pl.DataFrame({
+    'CASE_ID': [100000032, 100000041, 100020000],
+    'first_name_reference': ['DAVID', 'DAVID', 'TRASH'],
+    'last_name_reference': ['SMITDAVIS', 'SMITDAVIS', 'PANDA'],
+    'ref_collection_date': [date(2024, 11, 29), date(2024, 8, 31), date(2024, 8, 31)],
+    'ref_dob': [date(1989, 7, 15), date(1989, 7, 15), date(1990, 6, 21)]
+})
+```
+
+**Step 3:** Initalize the fuzzy matching class and input which dataframes and columns you are matching on
+```{python}
+fuzzy_init = dfm.DataFrameMatcher(
+    df_subm=your_df,
+    df_ref=reference_df,
+    first_name_ref='first_name_reference',
+    last_name_ref='last_name_reference',
+    dob_ref='ref_dob',
+    spec_col_date_ref='ref_collection_date',
+    first_name_src='first_name',
+    last_name_src='last_name',
+    dob_src='sub_dob',
+    spec_col_date_src='sub_collection_date',
+    key='submission_number',
+    threshold=80 # set what kind of fuzzy threshold you want, 100 being exact match
+)
+```
+
+**Step 4:** Run fuzzy matching! This will output data on what matched and what didn't match.
+
+```{python}
+result = fuzzy_init.match()
+```
+
+You can also examine the output dataframes by pulling them out of the result class, like this:
+
+
+```{python}
+result.fuzzy_unmatched
+```
+
+```{python}
+result.fuzzy_matched
+```

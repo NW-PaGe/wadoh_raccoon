@@ -8,14 +8,56 @@
 
 | Name | Description |
 | --- | --- |
+| [clean_name](#src.wadoh_raccoon.utils.helpers.clean_name) | Clean name field by stripping non-alpha characters and converting to uppercase. |
 | [date_format](#src.wadoh_raccoon.utils.helpers.date_format) | Format Dates |
+| [get_secrets](#src.wadoh_raccoon.utils.helpers.get_secrets) | Get secrets |
 | [gt_style](#src.wadoh_raccoon.utils.helpers.gt_style) | Style for GT Tables |
 | [save_raw_values](#src.wadoh_raccoon.utils.helpers.save_raw_values) | save raw values |
+
+### clean_name { #src.wadoh_raccoon.utils.helpers.clean_name }
+
+```python
+wadoh_raccoon.utils.helpers.clean_name(col: str)
+```
+
+Clean name field by stripping non-alpha characters and converting to uppercase.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**col**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   Name of column to clean
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [pl.Expr:]{.parameter-annotation}</code>
+
+:   a column of uppercase, non-alpha character, non-whitespace strings
+
+#### Examples {.doc-section .doc-section-examples}
+
+```{python}
+import polars as pl
+from wadoh_raccoon.utils import helpers
+
+df = pl.DataFrame({
+    "name": [
+        "A$AP rocky",
+        "50 cent",
+        "sTevIe WoNdEr"
+    ]
+})
+
+output = df.with_columns(helpers.clean_name("name").alias("clean_name"))
+
+helpers.gt_style(df_inp=output)
+
+```
 
 ### date_format { #src.wadoh_raccoon.utils.helpers.date_format }
 
 ```python
-wadoh_raccoon.utils.helpers.date_format(col: str)
+wadoh_raccoon.utils.helpers.date_format(df: pl.DataFrame, col: str)
 ```
 
 Format Dates
@@ -23,8 +65,9 @@ Format Dates
 Convert string dates into a yyyy-mm-dd format. 
 The function uses pl.coalesce to try to process different formats.
 For example, it will first try to convert m/d/y, and then if that doesn't work it will try d/m/y.
+It's not perfect, but if someone messes up the date it's their fault.
 
-**Note: it won't attempt to convert excel dates.**
+**Note: it won't attempt to convert excel dates. If someone sends us excel dates we will file a lawsuit.**
 
 #### Usage {.doc-section .doc-section-usage}
 
@@ -32,13 +75,17 @@ To be applied to a string date column.
 
 #### Parameters {.doc-section .doc-section-parameters}
 
+<code>[**df**]{.parameter-name} [:]{.parameter-annotation-sep} [pl.DataFrame]{.parameter-annotation}</code>
+
+:   a polars dataframe (needed to check if col is pl.Date type or not)
+
 <code>[**col**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
 
 :   a string column that has a date
 
 #### Returns {.doc-section .doc-section-returns}
 
-<code>[**output_date**]{.parameter-name} [:]{.parameter-annotation-sep} [date]{.parameter-annotation}</code>
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [pl.Expr: ]{.parameter-annotation}</code>
 
 :   a date column
 
@@ -47,7 +94,6 @@ To be applied to a string date column.
 ```{python}
 import polars as pl
 from wadoh_raccoon.utils import helpers
-
 
 df = pl.DataFrame({
     "dates": [
@@ -61,13 +107,68 @@ df = pl.DataFrame({
     ]
 })
 
-helpers.gt_style(
+output = (
     df
     .with_columns(
-        new_date=helpers.date_format('dates')
+        new_date=helpers.date_format(df=df,col='dates')
     )
 )
 
+helpers.gt_style(df_inp=output)
+
+```
+
+### get_secrets { #src.wadoh_raccoon.utils.helpers.get_secrets }
+
+```python
+wadoh_raccoon.utils.helpers.get_secrets(vault, keys)
+```
+
+Get secrets
+
+Retrieve secrets from Azure KeyVault.
+This function will utilize the keys that are passed to retrieve the 
+corresponding secrets.
+
+**Note: Authenication takes place via DefaultAzureCredential which attempts
+multiple authentication methods. One method is checking against Azure CLI 
+if logged in.
+
+#### Usage {.doc-section .doc-section-usage}
+
+Use this function to securely retrieve secret values from Azure KeyVault
+using the specified key(s). The function accepts either a single key or
+multiple keys as a list.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**vault**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   Key vault url.
+
+<code>[**keys**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   A single secret key or list of secret keys.
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [str or tuple of str]{.parameter-annotation}</code>
+
+:   If a single key is provided, returns the secret value as a string. If a list of keys is provided, returns a tuple of secret values in the  same order.
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+from wadoh_raccoon.utils import helpers
+
+# Get a single secret
+db_password = helpers.get_secrets("keyvault_url", "db-password")
+
+# Get multiple secrets at once
+username, password, api_key = helpers.get_secrets(
+    "keyvault_url",
+    ["db-username", "db-password", "api-key"]
+)
 ```
 
 ### gt_style { #src.wadoh_raccoon.utils.helpers.gt_style }

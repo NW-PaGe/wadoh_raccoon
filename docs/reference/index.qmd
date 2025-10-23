@@ -7,3 +7,12 @@ main scripts that run the process
 | | |
 | --- | --- |
 | [helpers](helpers.qmd#src.wadoh_raccoon.utils.helpers) |  |
+| [azure](azure.qmd#src.wadoh_raccoon.utils.azure) |  |
+
+## Matching
+
+functions for record matching
+
+| | |
+| --- | --- |
+| [dataframe_matcher](dataframe_matcher.qmd#wadoh_raccoon.dataframe_matcher) |  |

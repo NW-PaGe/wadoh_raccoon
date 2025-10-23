@@ -174,3 +174,6 @@ cython_debug/
 .pypirc
 
 config.yaml
+
+# scratch folder for testing
+scratch

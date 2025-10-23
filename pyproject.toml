@@ -13,6 +13,7 @@ dependencies = [
     "azure-storage-blob>=12.25.1",
     "great-tables>=0.17.0",
     "polars>=1.18.0",
+    "thefuzz>=0.22.1",
 ]
 
 [project.scripts]
@@ -29,4 +30,9 @@ dev = [
     "nbformat>=5.10.4",
     "pytest>=8.3.5",
     "quartodoc>=0.9.1",
+]
+
+[tool.uv.workspace]
+members = [
+    "wadoh_raccoon",
 ]
