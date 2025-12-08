@@ -2,7 +2,6 @@ import polars as pl
 from thefuzz import fuzz
 from pydantic import BaseModel
 from wadoh_raccoon.utils import helpers
-from typing import Iterable
 
 
 class DataFrameMatcherResults(BaseModel):
@@ -31,22 +30,22 @@ class DataFrameMatcher:
         Source dataframe containing any Key(s) and patient demographics.
     df_ref: pl.DataFrame 
         Reference queried dataframe containing patient demographics. 
-    first_name: Iterable[str]
+    first_name: str | tuple[str, str]
         The first name demographic column name in the source and reference dataframes.
-        If the names are different, they should be provided in a tuple (or other iterable object)
-        containing the source name first, followed by the reference name. 
-    last_name: Iterable[str]
+        If the names are different, they should be provided in a tuple containing the
+        source name first, followed by the reference name.
+    last_name: str | tuple[str, str]
         The last name demographic column name in the source and reference dataframes.
-        If the names are different, they should be provided in a tuple (or other iterable object)
-        containing the source name first, followed by the reference name. 
-    dob: Iterable[str]
+        If the names are different, they should be provided in a tuple containing the
+        source name first, followed by the reference name.
+    dob: str | tuple[str, str]
         The birth date demographic column name in the source and reference dataframes.
-        If the names are different, they should be provided in a tuple (or other iterable object)
-        containing the source name first, followed by the reference name. 
-    spec_col_date: Iterable[str]
+        If the names are different, they should be provided in a tuple containing the
+        source name first, followed by the reference name.
+    spec_col_date: str | tuple[str, str]
         The specimen collection date column name in the source and reference dataframes.
-        If the names are different, they should be provided in a tuple (or other iterable object)
-        containing the source name first, followed by the reference name.
+        If the names are different, they should be provided in a tuple containing the
+        source name first, followed by the reference name.
     key: str | list (optional)
         The key (or list of keys) which group to a distinct source record. Only one match can be
         returned per distinct key. If no key given, each row in the source df will be treated as
@@ -149,10 +148,10 @@ class DataFrameMatcher:
         self, 
         df_src: pl.DataFrame, 
         df_ref: pl.DataFrame,
-        first_name: Iterable[str],
-        last_name: Iterable[str],
-        dob: Iterable[str],
-        spec_col_date: Iterable[str],
+        first_name: str | tuple[str, str],
+        last_name: str | tuple[str, str],
+        dob: str | tuple[str, str],
+        spec_col_date: str | tuple[str, str],
         key: str | list | None = None,
         threshold: int | float = 80
     ):
