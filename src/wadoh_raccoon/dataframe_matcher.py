@@ -2,6 +2,7 @@ import polars as pl
 from thefuzz import fuzz
 from pydantic import BaseModel
 from wadoh_raccoon.utils import helpers
+from typing import Iterable
 
 
 class DataFrameMatcherResults(BaseModel):
@@ -30,7 +31,7 @@ class DataFrameMatcher:
         Submissions dataframe containing Key(s), patient demographics (if available), and the submission data.
     df_ref: pl.DataFrame 
         reference queried dataframe with CASE_ID, columns potentially containing the key, patient demographics. 
-    first_name_ref: str
+    first_name: Iterable[str] | str
         first name column from reference_df
     last_name_ref: str
         last name column from reference_df
@@ -147,63 +148,45 @@ class DataFrameMatcher:
         df_subm: pl.DataFrame, 
         df_ref: pl.DataFrame,
         threshold: int | float = 80,
-
-        first_name: str | None = None,
-        last_name: str | None = None,
-        dob: str | None = None,
-        spec_col_date: str | None = None,
-
-        first_name_src: str | None = None,
-        last_name_src: str | None = None,
-        dob_src: str | None = None,
-        spec_col_date_src: str | None = None,
-
-        first_name_ref: str | None = None,
-        last_name_ref: str | None = None,
-        dob_ref: str | None = None,
-        spec_col_date_ref: str | None = None,
-
+        first_name: Iterable[str],
+        last_name: Iterable[str],
+        dob: Iterable[str],
+        spec_col_date: Iterable[str],
         key: str | None = None
         ):
-
-        # Check col name param sets
-        self.__demo_param_checker(first_name, first_name_ref, first_name_src, "first_name")
-        self.__demo_param_checker(last_name, last_name_ref, last_name_src, "last_name")
-        self.__demo_param_checker(dob, dob_ref, dob_src, "dob")
-        self.__demo_param_checker(spec_col_date, spec_col_date_ref, spec_col_date_src, "spec_col_date")
 
         # Source and reference data
         self.df_subm = df_subm
         self.df_ref = df_ref
 
         # Column names
-        if first_name:
-            self.first_name_src = str(first_name)
-            self.first_name_ref = str(first_name)
+        if type(first_name) == str:
+            self.first_name_src = first_name
+            self.first_name_ref = first_name
         else:
-            self.first_name_src = str(first_name_src)
-            self.first_name_ref = str(first_name_ref)
+            self.first_name_src = first_name[0]
+            self.first_name_ref = first_name[1]
 
-        if last_name:
-            self.last_name_src = str(last_name)
-            self.last_name_ref = str(last_name)
+        if type(last_name) == str:
+            self.last_name_src = last_name
+            self.last_name_ref = last_name
         else:
-            self.last_name_src = str(last_name_src)
-            self.last_name_ref = str(last_name_ref)
-
-        if dob:
-            self.dob_src = str(dob)
-            self.dob_ref = str(dob)
+            self.last_name_src = last_name[0]
+            self.last_name_ref = last_name[1]
+        
+        if type(dob) == str:
+            self.dob_src = dob
+            self.dob_ref = dob
         else:
-            self.dob_src = str(dob_src)
-            self.dob_ref = str(dob_ref)
-
-        if spec_col_date:
-            self.spec_col_date_src = str(spec_col_date)
-            self.spec_col_date_ref = str(spec_col_date)
+            self.dob_src = dob[0]
+            self.dob_ref = dob[1]
+        
+        if type(spec_col_date) == str:
+            self.spec_col_date_src = spec_col_date
+            self.spec_col_date_ref = spec_col_date
         else:
-            self.spec_col_date_src = str(spec_col_date_src)
-            self.spec_col_date_ref = str(spec_col_date_ref)
+            self.spec_col_date_src = spec_col_date[0]
+            self.spec_col_date_ref = spec_col_date[1]
 
         # submission key
         if key is None:
@@ -233,11 +216,6 @@ class DataFrameMatcher:
         )
 
         return clean_df
-
-    @staticmethod
-    def __demo_param_checker(param, param_src, param_ref, param_name):
-        if param is None and (param_src is None or param_ref is None):
-            raise ValueError(f"`{param_name}` or both `{param_name}_src` and `{param_name}_ref` must not be None")
 
     def clean_all(self) -> (pl.DataFrame, pl.DataFrame):
 
