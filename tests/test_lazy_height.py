@@ -3,15 +3,14 @@ import pytest
 from wadoh_raccoon.utils import helpers
 
 
-# Test empty and non-empty frames
-@pytest.mark.parametrize("height", [0, 100])
-
-# Test DataFrames and LazyFrames
-@pytest.mark.parametrize('lazy', ['lazy', 'eager'])
-
 # ---- test the function ---- #
 
 # test with polars
+
+# Test empty and non-empty frames
+@pytest.mark.parametrize("height", [0, 100])
+# Test DataFrames and LazyFrames
+@pytest.mark.parametrize('lazy', ['lazy', 'eager'])
 def test_frame_height(height, lazy):
     """
     Test if the column names of the transformed dataframe

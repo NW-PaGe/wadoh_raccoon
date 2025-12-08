@@ -27,11 +27,10 @@ def output_df():
         .with_columns(pl.col('output_date').cast(pl.Date))
     )
 
-@pytest.mark.parametrize('lazy', ['lazy', 'eager'])
-
 # ---- test the function ---- #
 
 # test with polars
+@pytest.mark.parametrize('lazy', ['lazy', 'eager'])
 def test_date_format_polars(input_df, output_df, lazy):
     """
     Test if the column names of the transformed dataframe
