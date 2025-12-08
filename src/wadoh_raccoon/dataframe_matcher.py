@@ -185,10 +185,9 @@ class DataFrameMatcher:
             self.df_src = self.df_src.with_row_index(name=self.key[0])
         else:
             self.key_isnone = False
-            if type(key) == str:
-                self.key = [key]
-            else:
-                self.key = key
+            if isinstance(key, str):
+                key = [key]
+            self.key = key
         
         # threshold
         self.threshold = threshold
