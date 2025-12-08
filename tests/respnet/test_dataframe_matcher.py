@@ -29,24 +29,15 @@ def get_data():
         'internal_create_date'])
 
     instance = dataframe_matcher.DataFrameMatcher(
-        df_subm=input_subm,
+        df_src=input_subm,
         df_ref=wdrs,
-
-        first_name_ref='FIRST_NAME',
-        last_name_ref='LAST_NAME',
-        dob_ref='DOB',
-        spec_col_date_ref='SPECIMEN_COLLECTION_DATE',
-
-        first_name_src='PatientFirstName',
-        last_name_src='PatientLastName',
-        dob_src='PatientBirthDate',
-        spec_col_date_src='SpecimenDateCollected',
-        
+        first_name=('PatientFirstName', 'FIRST_NAME'),
+        last_name=('PatientLastName', 'LAST_NAME'),
+        dob=('PatientBirthDate', 'DOB'),
+        spec_col_date=('SpecimenDateCollected', 'SPECIMEN_COLLECTION_DATE'),
         key='submission_number',
         threshold=80
     )
-
-    # fuzz_matched, fuzz_unmatched = instance.fuzzy_match()
 
     result = instance.match()
 
