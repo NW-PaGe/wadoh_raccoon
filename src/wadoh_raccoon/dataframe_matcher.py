@@ -47,14 +47,13 @@ class DataFrameMatcher:
         The specimen collection date column name in the source and reference dataframes.
         If the names are different, they should be provided in a tuple (or other iterable object)
         containing the source name first, followed by the reference name.
-    threshold: int | float (optional)
-        The inclusive fuzzy scoring threshold used to filter fuzzy matches. Matches with a score 
-        at or above the threshold will be returned in the fuzzy matched object. Defaults to 80.
     key: str | list (optional)
         The key (or list of keys) which group to a distinct source record. Only one match can be
         returned per distinct key. If no key given, each row in the source df will be treated as
         a distinct record to be matched.
-        
+    threshold: int | float (optional)
+        The inclusive fuzzy scoring threshold used to filter fuzzy matches. Matches with a score 
+        at or above the threshold will be returned in the fuzzy matched object. Defaults to 80.
 
     Returns
     -------
@@ -104,14 +103,10 @@ class DataFrameMatcher:
     fuzzy_init = dfm.DataFrameMatcher(
         df_src=your_df,
         df_ref=reference_df,
-        first_name_ref='first_name_reference',
-        last_name_ref='last_name_reference',
-        dob_ref='ref_dob',
-        spec_col_date_ref='ref_collection_date',
-        first_name_src='first_name',
-        last_name_src='last_name',
-        dob_src='sub_dob',
-        spec_col_date_src='sub_collection_date',
+        first_name=('first_name', first_name_reference'),
+        last_name=('last_name', 'last_name_reference'),
+        dob=('sub_dob', 'ref_dob'),
+        spec_col_date=('sub_collection_date', 'ref_collection_date'),
         key='submission_number',
         threshold=80  # set what kind of fuzzy threshold you want, 100 being exact match
     )
@@ -154,52 +149,40 @@ class DataFrameMatcher:
         self, 
         df_src: pl.DataFrame, 
         df_ref: pl.DataFrame,
-        threshold: int | float = 80,
         first_name: Iterable[str],
         last_name: Iterable[str],
         dob: Iterable[str],
         spec_col_date: Iterable[str],
-        key: str | list | None = None
-        ):
+        key: str | list | None = None,
+        threshold: int | float = 80
+    ):
 
         # Source and reference data
         self.df_src = df_src
         self.df_ref = df_ref
 
         # Column names
-        if type(first_name) == str:
-            self.first_name_src = first_name
-            self.first_name_ref = first_name
-        else:
-            self.first_name_src = first_name[0]
-            self.first_name_ref = first_name[1]
+        if isinstance(first_name, str):
+            first_name = (first_name, first_name)
+        self.first_name_src, self.first_name_ref = first_name
 
-        if type(last_name) == str:
-            self.last_name_src = last_name
-            self.last_name_ref = last_name
-        else:
-            self.last_name_src = last_name[0]
-            self.last_name_ref = last_name[1]
-        
-        if type(dob) == str:
-            self.dob_src = dob
-            self.dob_ref = dob
-        else:
-            self.dob_src = dob[0]
-            self.dob_ref = dob[1]
-        
-        if type(spec_col_date) == str:
-            self.spec_col_date_src = spec_col_date
-            self.spec_col_date_ref = spec_col_date
-        else:
-            self.spec_col_date_src = spec_col_date[0]
-            self.spec_col_date_ref = spec_col_date[1]
+        if isinstance(last_name, str):
+            last_name = (last_name, last_name)
+        self.last_name_src, self.last_name_ref = last_name
+
+        if isinstance(dob, str):
+            dob = (dob, dob)
+        self.dob_src, self.dob_ref = dob
+
+        if isinstance(spec_col_date, str):
+            spec_col_date = (spec_col_date, spec_col_date)
+        self.spec_col_date_src, self.spec_col_date_ref = spec_col_date
 
         # submission key
         if key is None:
             self.key_isnone = True
             self.key = ['___key___']
-            self.df_src = self.df_src.with_row_index(name=self.key)
+            self.df_src = self.df_src.with_row_index(name=self.key[0])
         else:
             self.key_isnone = False
             if type(key) == str:
