@@ -85,7 +85,7 @@ class DataFrameMatcher:
         'first_name': ['DAVIS', 'DAVIS', 'GRANT'],
         'last_name': ['SMITHDAVIS', 'SMITHDAVIS', 'MITHCELL'],
         'sub_collection_date': [date(2024, 11, 29), date(2024, 11, 29), date(2024, 12, 2)],
-        'sub_dob': [date(1989, 7, 15), date(1989, 7, 15), date(1990, 6, 21)]
+        'birth_date': [date(1989, 7, 15), date(1989, 7, 15), date(1990, 6, 21)]
     })
 
     reference_df = pl.DataFrame({
@@ -93,7 +93,7 @@ class DataFrameMatcher:
         'first_name_reference': ['DAVID', 'DAVID', 'TRASH'],
         'last_name_reference': ['SMITDAVIS', 'SMITDAVIS', 'PANDA'],
         'ref_collection_date': [date(2024, 11, 29), date(2024, 8, 31), date(2024, 8, 31)],
-        'ref_dob': [date(1989, 7, 15), date(1989, 7, 15), date(1990, 6, 21)]
+        'birth_date': [date(1989, 7, 15), date(1989, 7, 15), date(1990, 6, 21)]
     })
     ```
 
@@ -104,7 +104,7 @@ class DataFrameMatcher:
         df_ref=reference_df,
         first_name=('first_name', first_name_reference'),
         last_name=('last_name', 'last_name_reference'),
-        dob=('sub_dob', 'ref_dob'),
+        dob='birth_date',
         spec_col_date=('sub_collection_date', 'ref_collection_date'),
         key='submission_number',
         threshold=80  # set what kind of fuzzy threshold you want, 100 being exact match
