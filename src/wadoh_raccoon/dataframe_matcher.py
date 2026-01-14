@@ -5,10 +5,10 @@ from wadoh_raccoon.utils import helpers
 
 
 class DataFrameMatcherResults(BaseModel):
-    exact_matched: pl.DataFrame
-    fuzzy_matched: pl.DataFrame
-    fuzzy_unmatched: pl.DataFrame
-    no_demo: pl.DataFrame
+    exact_matched: pl.DataFrame | pl.LazyFrame
+    fuzzy_matched: pl.DataFrame | pl.LazyFrame
+    fuzzy_unmatched: pl.DataFrame | pl.LazyFrame
+    no_demo: pl.DataFrame | pl.LazyFrame
 
     # Required when using polars dataframes
     model_config = {
@@ -433,8 +433,8 @@ class DataFrameMatcher:
 
         # ------- Fuzzy Matching ------- #
 
-        if dob_match.height > 0:
-            multiple_matches_ratios = self.score(dob_match.lazy()).collect()
+        if helpers.lazy_height(dob_match) > 0:
+            multiple_matches_ratios = self.score(dob_match.lazy())
 
             # Get ones that matched on ratio >= threshold
             multiple_matches_ratios_final = multiple_matches_ratios.filter(
@@ -469,6 +469,10 @@ class DataFrameMatcher:
                 fuzzy_matched = fuzzy_matched.drop(self.key)
                 fuzzy_unmatched = fuzzy_unmatched.drop(self.key)
                 
+            if isinstance(dob_match, pl.DataFrame):
+                fuzzy_matched = fuzzy_matched.collect()
+                fuzzy_unmatched = fuzzy_unmatched.collect()
+                
         return fuzzy_matched, fuzzy_unmatched
 
     def __output_summary(
@@ -492,48 +496,46 @@ class DataFrameMatcher:
             how = "diagonal_relaxed")
 
         # anti_join outputs to see if any data is missing from the outputs from the original df
-        check_data_leaks = (
-            submissions_to_fuzzy_df
-            .join(all_outputs, on=self.key, how="anti")
-            .select(pl.len()).item()
+        check_data_leaks = helpers.lazy_height(
+            submissions_to_fuzzy_df.join(all_outputs, on=self.key, how="anti")
         )
 
         # try the opposite anti join
-        check_data_leaks_reverse = (
-            all_outputs
-            .join(submissions_to_fuzzy_df, on=self.key, how="anti")
-            .select(pl.len()).item()
+        check_data_leaks_reverse = helpers.lazy_height(
+            all_outputs.join(submissions_to_fuzzy_df, on=self.key, how="anti")
         )
 
         # Output errors if any data leaks happen!
         if check_data_leaks > 0 or check_data_leaks_reverse > 0:
             print("ERROR!! Fuzzy data leaked. Data are in submissions_to_fuzzy_df that cannot be found in fuzzy outputs")
             print("Total processed: ",
-                fuzzy_matched_df.shape[0] +
-                fuzzy_without_demo_df.shape[0] +
-                exact_match_df.shape[0] +
-                fuzzy_unmatched_df.shape[0],
+                helpers.lazy_height(fuzzy_matched_df) +
+                helpers.lazy_height(fuzzy_without_demo_df) +
+                helpers.lazy_height(exact_match_df) +
+                helpers.lazy_height(fuzzy_unmatched_df),
                 "\nOriginal submissions to fuzzy (including no_match rematch attempt):",
-                submissions_to_fuzzy_df.shape[0]
+                helpers.lazy_height(submissions_to_fuzzy_df)
             )
             raise pl.exceptions.PolarsError("ERROR!! Fuzzy data leaked. Data are in submissions_to_fuzzy_df that cannot be found in fuzzy outputs")
         else:
             print("Success: No data leaks detected. Insert victory cigar")
 
         # ------ Results ------ #
-        print(exact_match_df.shape[0], "exact matches")
-        print(fuzzy_matched_df.shape[0], "fuzzy matched")
-        print(fuzzy_unmatched_df.shape[0], "no match found")
-        print(fuzzy_without_demo_df.shape[0], "records without demo\n")
+        em_height = helpers.lazy_height(exact_match_df)
+        fm_height = helpers.lazy_height(fuzzy_matched_df)
+        fum_height = helpers.lazy_height(fuzzy_unmatched_df)
+        fwd_height = helpers.lazy_height(fuzzy_without_demo_df)
+
+        print(em_height, "exact matches")
+        print(fm_height, "fuzzy matched")
+        print(fum_height, "no match found")
+        print(fwd_height, "records without demo\n")
         
 
         print("Total unique persons processed: ",
-            fuzzy_matched_df.shape[0] +
-            fuzzy_without_demo_df.shape[0] +
-            exact_match_df.shape[0] +
-            fuzzy_unmatched_df.shape[0],
+            em_height + fm_height + fwd_height + fum_height,
             "\nOriginal submissions to fuzzy (including no_match rematch attempt):",
-            submissions_to_fuzzy_df.shape[0]
+            helpers.lazy_height(submissions_to_fuzzy_df)
         )
 
     def match(self, verbose=True):

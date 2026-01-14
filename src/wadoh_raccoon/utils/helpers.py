@@ -42,14 +42,14 @@ def clean_name(col: str) -> pl.Expr:
     """
     return pl.col(col).str.replace_all('[^a-zA-Z]', '').str.to_uppercase()
 
-def date_format(df: pl.DataFrame,col: str):
+def date_format(df: pl.DataFrame | pl.LazyFrame,col: str):
     """ Format Dates
 
-    Convert string dates into a yyyy-mm-dd format. 
+    Convert string dates into a yyyy-mm-dd format.
     The function uses pl.coalesce to try to process different formats.
     For example, it will first try to convert m/d/y, and then if that doesn't work it will try d/m/y.
     It's not perfect, but if someone messes up the date it's their fault.
-    
+
     **Note: it won't attempt to convert excel dates. If someone sends us excel dates we will file a lawsuit.**
 
     Usage
@@ -62,13 +62,13 @@ def date_format(df: pl.DataFrame,col: str):
         a polars dataframe (needed to check if col is pl.Date type or not)
     col: str
         a string column that has a date
-    
+
 
     Returns
     -------
-    pl.Expr: 
+    pl.Expr:
         a date column
-    
+
     Examples
     --------
     ```{python}
@@ -86,7 +86,7 @@ def date_format(df: pl.DataFrame,col: str):
             "2022-12-27 08:26:49"
         ]
     })
-    
+
     output = (
         df
         .with_columns(
@@ -95,7 +95,7 @@ def date_format(df: pl.DataFrame,col: str):
     )
 
     helpers.gt_style(df_inp=output)
-    
+
     ```
 
     """
@@ -104,9 +104,13 @@ def date_format(df: pl.DataFrame,col: str):
     #     .then(pl.lit('date')).alias("check")
     # )
 
-    if df[col].dtype.is_temporal():
+    if isinstance(df, pl.DataFrame):
+        col_type = df.schema[col]
+    else:
+        col_type = df.collect_schema()[col]
+    if col_type.is_temporal():
         return pl.col(col).cast(pl.Date)
-    
+
 
     return pl.coalesce(
             # see this for date types https://docs.rs/chrono/latest/chrono/format/strftime/index.html
@@ -367,3 +371,10 @@ def gt_style(
 
 
     return table
+
+def lazy_height(lf: pl.DataFrame | pl.LazyFrame):
+    """Output the height of a polars frame regardless of it being lazy or eager"""
+    if isinstance(lf, pl.LazyFrame):
+        return lf.select(pl.len()).collect().item()
+    else:
+        return lf.height

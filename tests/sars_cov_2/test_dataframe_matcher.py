@@ -50,8 +50,15 @@ class TestDataFrameMatcher:
         no_demo_test_exp_results_df_path = TEST_DATA_DIR / "no_demo_test_exp_results_df.parquet"
         return pl.read_parquet(no_demo_test_exp_results_df_path)
 
-    def test_init(self, fuzzy_match_test_df, match_to_test_df):
+    # Test DataFrames and LazyFrames
+    @pytest.mark.parametrize('lazy', ['lazy', 'eager'])
+    def test_init(self, fuzzy_match_test_df, match_to_test_df, lazy):
         """Test that the DataFrameMatcher initializes correctly."""
+
+        if lazy == 'lazy':
+            fuzzy_match_test_df = fuzzy_match_test_df.lazy()
+            match_to_test_df = match_to_test_df.lazy()
+
         matcher = DataFrameMatcher(
             df_src=fuzzy_match_test_df,
             df_ref=match_to_test_df,
@@ -74,14 +81,25 @@ class TestDataFrameMatcher:
         for col in expected_columns:
             assert col in matcher.df_ref.columns
 
+    @pytest.mark.parametrize('lazy', ['lazy', 'eager'])
     def test_fuzzy_match(self, 
                          fuzzy_match_test_df,
                          match_to_test_df,
                          exact_matched_test_exp_results_df,
                          fuzzy_matched_test_exp_results_df, 
                          fuzzy_unmatched_test_exp_results_df,
-                         no_demo_test_exp_results_df):
+                         no_demo_test_exp_results_df,
+                         lazy):
         """Test fuzzy matching based on patient demographics."""
+
+        if lazy == 'lazy':
+            fuzzy_match_test_df = fuzzy_match_test_df.lazy()
+            match_to_test_df = match_to_test_df.lazy()
+            exact_matched_test_exp_results_df = exact_matched_test_exp_results_df.lazy()
+            fuzzy_matched_test_exp_results_df = fuzzy_matched_test_exp_results_df.lazy()
+            fuzzy_unmatched_test_exp_results_df = fuzzy_unmatched_test_exp_results_df.lazy()
+            no_demo_test_exp_results_df = no_demo_test_exp_results_df.lazy()
+
         matcher = DataFrameMatcher(
             df_src=fuzzy_match_test_df,
             df_ref=match_to_test_df,
