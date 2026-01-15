@@ -40,10 +40,22 @@ class TestDataFrameMatcher:
         return pl.read_parquet(fuzzy_matched_test_exp_results_df_path)
 
     @pytest.fixture
+    def fuzzy_matched_test_exp_results_daymaxed_df(self):
+        """Load the expected fuzzy match output from disk."""
+        fuzzy_matched_test_exp_results_daymaxed_df_path = TEST_DATA_DIR / "fuzzy_matched_test_exp_results_daymaxed_df.parquet"
+        return pl.read_parquet(fuzzy_matched_test_exp_results_daymaxed_df_path)
+
+    @pytest.fixture
     def fuzzy_unmatched_test_exp_results_df(self):
         """Load the expected fuzzy unmatch output from disk."""
         fuzzy_unmatched_test_exp_results_df_path = TEST_DATA_DIR / "fuzzy_unmatched_test_exp_results_df.parquet"
         return pl.read_parquet(fuzzy_unmatched_test_exp_results_df_path)
+
+    @pytest.fixture
+    def fuzzy_unmatched_test_exp_results_daymaxed_df(self):
+        """Load the expected fuzzy unmatch output from disk."""
+        fuzzy_unmatched_test_exp_results_daymaxed_df_path = TEST_DATA_DIR / "fuzzy_unmatched_test_exp_results_daymaxed_df.parquet"
+        return pl.read_parquet(fuzzy_unmatched_test_exp_results_daymaxed_df_path)
 
     @pytest.fixture
     def no_demo_test_exp_results_df(self):
@@ -92,16 +104,22 @@ class TestDataFrameMatcher:
                          fuzzy_match_test_df,
                          match_to_test_df,
                          exact_matched_test_exp_results_df,
-                         fuzzy_matched_test_exp_results_df, 
+                         fuzzy_matched_test_exp_results_df,
+                         fuzzy_matched_test_exp_results_daymaxed_df,
                          fuzzy_unmatched_test_exp_results_df,
+                         fuzzy_unmatched_test_exp_results_daymaxed_df,
                          no_demo_test_exp_results_df,
-                         lazy):
+                         lazy,
+                         day_max,
+                         business_day_max):
         """Test fuzzy matching based on patient demographics."""
 
         if lazy == 'lazy':
             fuzzy_match_test_df = fuzzy_match_test_df.lazy()
             match_to_test_df = match_to_test_df.lazy()
             exact_matched_test_exp_results_df = exact_matched_test_exp_results_df.lazy()
+            fuzzy_matched_test_exp_results_daymaxed_df = fuzzy_matched_test_exp_results_daymaxed_df.lazy()
+            fuzzy_unmatched_test_exp_results_daymaxed_df = fuzzy_unmatched_test_exp_results_daymaxed_df.lazy()
             fuzzy_matched_test_exp_results_df = fuzzy_matched_test_exp_results_df.lazy()
             fuzzy_unmatched_test_exp_results_df = fuzzy_unmatched_test_exp_results_df.lazy()
             no_demo_test_exp_results_df = no_demo_test_exp_results_df.lazy()
@@ -120,11 +138,12 @@ class TestDataFrameMatcher:
 
         output = matcher.match()
 
-        if day_max not in {None, 4} or business_day_max not in {None, 4}:
-            output.fuzzy_matched = output.fuzzy_matched.filter(pl.col('submission_number').ne(103278112))
-
         # Compare Polars DataFrames with expected results
         assert_frame_equal(output.exact_matched, exact_matched_test_exp_results_df)
-        assert_frame_equal(output.fuzzy_matched, fuzzy_matched_test_exp_results_df)
-        assert_frame_equal(output.fuzzy_unmatched, fuzzy_unmatched_test_exp_results_df)
         assert_frame_equal(output.no_demo, no_demo_test_exp_results_df)
+        if day_max in {None, 4} and business_day_max in {None, 4}:
+            assert_frame_equal(output.fuzzy_matched, fuzzy_matched_test_exp_results_df)
+            assert_frame_equal(output.fuzzy_unmatched, fuzzy_unmatched_test_exp_results_df)
+        else:
+            assert_frame_equal(output.fuzzy_matched, fuzzy_matched_test_exp_results_daymaxed_df)
+            assert_frame_equal(output.fuzzy_unmatched, fuzzy_unmatched_test_exp_results_daymaxed_df)
