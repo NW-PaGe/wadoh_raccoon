@@ -445,7 +445,7 @@ class DataFrameMatcher:
                 # Get a date range calculation of days between submitted collection date and ref collection date
                 .with_columns(
                     day_count=
-                    pl.col('reference_collection_date').sub(pl.col('submitted_collection_date')).dt.total_days(),
+                    pl.col('reference_collection_date').sub(pl.col('submitted_collection_date')).dt.total_days().abs(),
                     business_day_count=
                     pl.business_day_count(start='submitted_collection_date', end='reference_collection_date').abs()
                 )
