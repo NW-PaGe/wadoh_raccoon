@@ -9,10 +9,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.5" # pin a specific version is best practice
+          enable-cache: true
+
+      # install python in 
       - name: "Set up Python"
         uses: actions/setup-python@v5
         with:
           python-version-file: "pyproject.toml"
 
       - name: Run tests
+        # For example, using `pytest`
         run: uv run pytest tests
