@@ -53,6 +53,13 @@ class DataFrameMatcher:
     threshold: int | float (optional)
         The inclusive fuzzy scoring threshold used to filter fuzzy matches. Matches with a score 
         at or above the threshold will be returned in the fuzzy matched object. Defaults to 80.
+    day_max: int (optional)
+        The max number of days between reference and source specimen collection dates a fuzzy matched record
+        can have and be returned as a match
+    business_day_max: int (optional)
+        The max number of business days between reference and source specimen collection dates a fuzzy matched
+        record can have and be returned as a match. Business days are counted as weekdays (holidays are
+        not accounted for).
 
     Returns
     -------
@@ -451,20 +458,20 @@ class DataFrameMatcher:
                 )
             )
 
+            # Get ones that matched on ratio >= threshold and pass day checks (if applicable)
+            multiple_matches_ratios_final = multiple_matches_ratios.filter(
+                pl.col('match_ratio').ge(self.threshold) | pl.col('reverse_match_ratio').ge(self.threshold)
+            )
+
             if self.day_max:
-                multiple_matches_ratios = multiple_matches_ratios.filter(
+                multiple_matches_ratios_final = multiple_matches_ratios_final.filter(
                     pl.col('day_count').le(self.day_max)
                 )
 
             if self.business_day_max:
-                multiple_matches_ratios = multiple_matches_ratios.filter(
+                multiple_matches_ratios_final = multiple_matches_ratios_final.filter(
                     pl.col('business_day_count').le(self.business_day_max)
                 )
-
-            # Get ones that matched on ratio >= threshold
-            multiple_matches_ratios_final = multiple_matches_ratios.filter(
-                pl.col('match_ratio').ge(self.threshold) | pl.col('reverse_match_ratio').ge(self.threshold)
-            )
 
             # get the top matches of the groups with no score meeting the threshold
             fuzzy_unmatched = (
