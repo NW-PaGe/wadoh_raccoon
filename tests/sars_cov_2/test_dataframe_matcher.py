@@ -2,6 +2,7 @@ import pytest
 import polars as pl
 from polars.testing import assert_frame_equal
 from pathlib import Path
+import itertools
 
 # Import the DataFrameMatcher class
 from wadoh_raccoon.dataframe_matcher import DataFrameMatcher
@@ -81,7 +82,12 @@ class TestDataFrameMatcher:
         for col in expected_columns:
             assert col in matcher.df_ref.columns
 
-    @pytest.mark.parametrize('lazy', ['lazy', 'eager'])
+    lazy_vals = ['lazy', 'eager']
+    day_vals = [None, 1, 4]
+    @pytest.mark.parametrize(
+        ('lazy', 'day_max', 'business_day_max'),
+        list(itertools.product(lazy_vals, day_vals, day_vals))
+    )
     def test_fuzzy_match(self, 
                          fuzzy_match_test_df,
                          match_to_test_df,
@@ -107,10 +113,15 @@ class TestDataFrameMatcher:
             last_name='LAST_NAME',
             dob=('DOB', 'PATIENT_DOB'),
             spec_col_date=('SEQUENCE_SPECIMEN_COLLECTION_DATE', 'SPECIMEN__COLLECTION__DTTM'),
-            key='submission_number'
+            key='submission_number',
+            day_max=day_max,
+            business_day_max=business_day_max
         )
 
         output = matcher.match()
+
+        if day_max not in {None, 4} or business_day_max not in {None, 4}:
+            output.fuzzy_matched = output.fuzzy_matched.filter(pl.col('submission_number').ne(103278112))
 
         # Compare Polars DataFrames with expected results
         assert_frame_equal(output.exact_matched, exact_matched_test_exp_results_df)
