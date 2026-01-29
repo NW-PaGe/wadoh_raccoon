@@ -55,9 +55,23 @@ def matcher(phl, wdrs, lazy, day_max, business_day_max):
 
     return result, day_max, business_day_max
 
+
+# set parameters to test
+# for each in lazy and eager, test day_max==None,1,4 and business_day_max==None,1,4
 lazy_vals = ['lazy', 'eager']
 day_vals = [None, 1, 4]
-@pytest.fixture(params=list(itertools.product(lazy_vals, day_vals, day_vals)))
+
+
+params = list(itertools.product(lazy_vals, day_vals, day_vals))
+
+# set an id so that pytest gives a human readable output
+# like tests/respnet/test_dataframe_matcher.py::test_matched[lazy=lazy-day=1-bizday=1] PASSED
+def make_id(param):
+    lazy, day_max, business_day_max = param
+    return f"lazy={lazy}-day={day_max}-bizday={business_day_max}"
+
+@pytest.fixture(params=params, ids=make_id)
+# @pytest.fixture(params=list(itertools.product(lazy_vals, day_vals, day_vals)))
 def result(phl, wdrs, request):
     lazy, day_max, business_day_max = request.param
     return matcher(phl, wdrs, lazy, day_max, business_day_max)
