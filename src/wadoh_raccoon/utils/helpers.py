@@ -1,4 +1,5 @@
 import polars as pl
+import paramiko
 from datetime import datetime
 from datetime import date
 from great_tables import GT, md, style, loc, google_font
@@ -367,3 +368,127 @@ def gt_style(
 
 
     return table
+
+def mft_upload(upload, dir, upload_file_name, upload_file_extension, username, password):
+    """Upload files to Washington State MFT server
+
+    Upload Polars DataFrames to the Washington State Managed File Transfer (MFT) 
+    server via SFTP. This function converts DataFrames to various file formats 
+    and securely transfers them to specified directories on the MFT server.
+
+    **Note: Authentication requires explicit credentials to be provided. The 
+    function automatically adds the server's host key for simplified connection 
+    handling.
+    
+    Usage
+    -----
+    Use this function to upload processed surveillance data, reports, or other 
+    DataFrames to the MFT server for sharing with partners. 
+    The function handles file format conversion.
+    
+    Parameters
+    ----------
+    upload : polars.DataFrame
+        The Polars DataFrame to upload.
+    dir : str
+        Target directory path on the MFT server (e.g., '/outbound/partner').
+    upload_file_name : str
+        Name of the file without extension (e.g., 'surveillance_report').
+    upload_file_extension : str
+        File extension including the dot. Supported formats: '.csv', '.xlsx', 
+        '.json', '.parquet'.
+    username : str
+        MFT server username.
+    password : str
+        MFT server password.
+    
+    Returns
+    -------
+    None
+        Files are uploaded directly to the MFT server. No return value.
+    
+    Raises
+    ------
+    ValueError
+        If upload_file_extension is not one of: .csv, .xlsx, .json, .parquet
+    OSError
+        If the target directory does not exist or cannot be accessed on the 
+        MFT server.
+    
+    Examples
+    --------
+    ```python
+        import polars as pl
+        from your_module import mft_upload
+        from your_module import get_secrets
+        
+        # Create sample DataFrame
+        df = pl.DataFrame({
+            'case_id': [1, 2, 3],
+            'pathogen': ['Salmonella', 'E. coli', 'Campylobacter']
+        })
+        
+        # Get credentials from Key Vault
+        mft_user = get_secrets('vault_url', 'mft-username')
+        mft_pass = get_secrets('vault_url', 'mft-password')
+        
+        # Upload as CSV
+        mft_upload(
+            upload=df,
+            dir='LHJ_share_dir',
+            upload_file_name='weekly_report_2024_01',
+            upload_file_extension='.csv',
+            username=mft_user,
+            password=mft_pass
+        )
+    ```
+    """
+    
+    # Get credentials from parameters
+    mft_username = username
+    mft_password = password
+    # Define host
+    host = "mft.wa.gov"
+    # Create SSH client
+    client = paramiko.SSHClient()
+    # Set policy to automatically add host keys
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    # Connect using just username and password
+    client.connect(
+        hostname=host,
+        username=mft_username,
+        password=mft_password
+    )
+    # Open SFTP session
+    sftp = client.open_sftp()
+    # # List available directories
+    # directories_list = sftp.listdir('.')
+    # print(f"Available directories: {directories_list}")
+    # Define target upload dir
+    target_directory = dir
+    # print(target_directory)
+    # Define upload path
+    upload_path = f"{target_directory}/{upload_file_name}{upload_file_extension}"
+    # Convert dataframe in to proper file type in memory based on extension
+    if upload_file_extension == ".csv":
+        upload_file = upload.write_csv() 
+    elif upload_file_extension == ".xlsx":
+        upload_file = upload.write_excel()
+    elif upload_file_extension == ".json":
+        upload_file = upload.write_json()
+    elif upload_file_extension == ".parquet":
+        upload_file = upload.write_parquet()
+    else:
+        raise ValueError(f"Unauthorized file type: {upload_file_extension}. Only .csv, .xlsx, .json, and .parquet are supported.")
+    
+    # Write to remote file
+    try:
+        with sftp.open(upload_path, 'w') as remote_file:
+            remote_file.write(upload_file)
+    except OSError as e:
+        print(f"OS error occurred: {e}")
+        print("Check if upload directory is correct/exists")
+        
+    # Close connections
+    sftp.close()
+    client.close()
