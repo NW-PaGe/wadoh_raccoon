@@ -15,6 +15,7 @@ dependencies = [
     "paramiko>=3.5.0",
     "polars>=1.18.0",
     "thefuzz>=0.22.1",
+    "xlsxwriter>=3.2.0"
 ]
 
 [project.scripts]

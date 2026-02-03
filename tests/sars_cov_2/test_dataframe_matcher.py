@@ -50,23 +50,28 @@ class TestDataFrameMatcher:
         no_demo_test_exp_results_df_path = TEST_DATA_DIR / "no_demo_test_exp_results_df.parquet"
         return pl.read_parquet(no_demo_test_exp_results_df_path)
 
-    def test_init(self, fuzzy_match_test_df, match_to_test_df):
+    # Test DataFrames and LazyFrames
+    @pytest.mark.parametrize('lazy', ['lazy', 'eager'])
+    def test_init(self, fuzzy_match_test_df, match_to_test_df, lazy):
         """Test that the DataFrameMatcher initializes correctly."""
+
+        if lazy == 'lazy':
+            fuzzy_match_test_df = fuzzy_match_test_df.lazy()
+            match_to_test_df = match_to_test_df.lazy()
+
         matcher = DataFrameMatcher(
-            df_subm=fuzzy_match_test_df,
+            df_src=fuzzy_match_test_df,
             df_ref=match_to_test_df,
             first_name='FIRST_NAME',
             last_name='LAST_NAME',
-            dob_src='DOB',
-            dob_ref='PATIENT_DOB',
-            spec_col_date_src='SEQUENCE_SPECIMEN_COLLECTION_DATE',
-            spec_col_date_ref='SPECIMEN__COLLECTION__DTTM',
+            dob=('DOB', 'PATIENT_DOB'),
+            spec_col_date=('SEQUENCE_SPECIMEN_COLLECTION_DATE', 'SPECIMEN__COLLECTION__DTTM'),
             key='submission_number'
         )
         
         # Check that dataframes are stored correctly
         # NOTE: this will not pass if key is not specified (a __key__ col will be created)
-        assert_frame_equal(matcher.df_subm, fuzzy_match_test_df)
+        assert_frame_equal(matcher.df_src, fuzzy_match_test_df)
 
         # Check that the match_to_test_df dataframe has the expected columns
         expected_columns = ["CASE_ID", "SPECIMEN__ID__ACCESSION__NUM__MANUAL", 
@@ -76,25 +81,35 @@ class TestDataFrameMatcher:
         for col in expected_columns:
             assert col in matcher.df_ref.columns
 
+    @pytest.mark.parametrize('lazy', ['lazy', 'eager'])
     def test_fuzzy_match(self, 
                          fuzzy_match_test_df,
                          match_to_test_df,
                          exact_matched_test_exp_results_df,
                          fuzzy_matched_test_exp_results_df, 
                          fuzzy_unmatched_test_exp_results_df,
-                         no_demo_test_exp_results_df):
+                         no_demo_test_exp_results_df,
+                         lazy):
         """Test fuzzy matching based on patient demographics."""
+
+        if lazy == 'lazy':
+            fuzzy_match_test_df = fuzzy_match_test_df.lazy()
+            match_to_test_df = match_to_test_df.lazy()
+            exact_matched_test_exp_results_df = exact_matched_test_exp_results_df.lazy()
+            fuzzy_matched_test_exp_results_df = fuzzy_matched_test_exp_results_df.lazy()
+            fuzzy_unmatched_test_exp_results_df = fuzzy_unmatched_test_exp_results_df.lazy()
+            no_demo_test_exp_results_df = no_demo_test_exp_results_df.lazy()
+
         matcher = DataFrameMatcher(
-            df_subm=fuzzy_match_test_df,
+            df_src=fuzzy_match_test_df,
             df_ref=match_to_test_df,
             first_name='FIRST_NAME',
             last_name='LAST_NAME',
-            dob_src='DOB',
-            dob_ref='PATIENT_DOB',
-            spec_col_date_src='SEQUENCE_SPECIMEN_COLLECTION_DATE',
-            spec_col_date_ref='SPECIMEN__COLLECTION__DTTM',
+            dob=('DOB', 'PATIENT_DOB'),
+            spec_col_date=('SEQUENCE_SPECIMEN_COLLECTION_DATE', 'SPECIMEN__COLLECTION__DTTM'),
             key='submission_number'
         )
+
         output = matcher.match()
 
         # Compare Polars DataFrames with expected results
