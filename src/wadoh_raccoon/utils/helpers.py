@@ -556,3 +556,11 @@ def mft_upload(
         raise ConnectionError(f"Unexpected error during SFTP upload: {e}")
     finally:
         client.close()
+        
+def lazy_height(lf: pl.DataFrame | pl.LazyFrame):
+    """Output the height of a polars frame regardless of it being lazy or eager"""
+    if isinstance(lf, pl.LazyFrame):
+        return lf.select(pl.len()).collect().item()
+    else:
+        return lf.height
+
