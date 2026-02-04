@@ -53,6 +53,13 @@ class DataFrameMatcher:
     threshold: int | float (optional)
         The inclusive fuzzy scoring threshold used to filter fuzzy matches. Matches with a score 
         at or above the threshold will be returned in the fuzzy matched object. Defaults to 80.
+    day_max: int (optional)
+        The max number of days between reference and source specimen collection dates a fuzzy matched record
+        can have and be returned as a match
+    business_day_max: int (optional)
+        The max number of business days between reference and source specimen collection dates a fuzzy matched
+        record can have and be returned as a match. Business days are counted as weekdays (holidays are
+        not accounted for).
 
     Returns
     -------
@@ -153,7 +160,9 @@ class DataFrameMatcher:
         dob: str | tuple[str, str],
         spec_col_date: str | tuple[str, str],
         key: str | list | None = None,
-        threshold: int | float = 80
+        threshold: int | float = 80,
+        day_max: int | None = None,
+        business_day_max: int | None = None
     ):
 
         # Source and reference data
@@ -190,6 +199,10 @@ class DataFrameMatcher:
         
         # threshold
         self.threshold = threshold
+
+        # day thresholds
+        self.day_max = day_max
+        self.business_day_max = business_day_max
 
     @staticmethod
     def __prep_df(df, first_name, last_name, spec_col_date, dob, output_spec_col_name, output_dob_name):
@@ -434,12 +447,31 @@ class DataFrameMatcher:
         # ------- Fuzzy Matching ------- #
 
         if helpers.lazy_height(dob_match) > 0:
-            multiple_matches_ratios = self.score(dob_match.lazy())
+            multiple_matches_ratios = (
+                self.score(dob_match.lazy())
+                # Get a date range calculation of days between submitted collection date and ref collection date
+                .with_columns(
+                    day_count=
+                    pl.col('reference_collection_date').sub(pl.col('submitted_collection_date')).dt.total_days().abs(),
+                    business_day_count=
+                    pl.business_day_count(start='submitted_collection_date', end='reference_collection_date').abs()
+                )
+            )
 
-            # Get ones that matched on ratio >= threshold
+            # Get ones that matched on ratio >= threshold and pass day checks (if applicable)
             multiple_matches_ratios_final = multiple_matches_ratios.filter(
                 pl.col('match_ratio').ge(self.threshold) | pl.col('reverse_match_ratio').ge(self.threshold)
             )
+
+            if self.day_max:
+                multiple_matches_ratios_final = multiple_matches_ratios_final.filter(
+                    pl.col('day_count').le(self.day_max)
+                )
+
+            if self.business_day_max:
+                multiple_matches_ratios_final = multiple_matches_ratios_final.filter(
+                    pl.col('business_day_count').le(self.business_day_max)
+                )
 
             # get the top matches of the groups with no score meeting the threshold
             fuzzy_unmatched = (
@@ -450,19 +482,19 @@ class DataFrameMatcher:
                 .with_columns(pl.max_horizontal('match_ratio', 'reverse_match_ratio').alias('max_ratio'))
                 # Select the match with the highest ratio within each group
                 .group_by(self.key)
-                .agg(pl.all().sort_by('max_ratio', descending=True).first())
-                .drop('max_ratio')
+                .agg(
+                    pl.all()
+                    .sort_by(['max_ratio', 'business_day_count', 'day_count'], descending=[True, False, False], nulls_last=True)
+                    .first()
+                )
+                .drop('max_ratio', 'day_count', 'business_day_count')
             )
 
             # here we need to group by key and select row with the closest collection date difference
             fuzzy_matched = (
                 multiple_matches_ratios_final
-                .with_columns(
-                    # Get a date range calculation of days between submitted collection date and ref collection date
-                    business_day_count=pl.business_day_count("submitted_collection_date", "reference_collection_date").abs()
-                )
                 .group_by(self.key)
-                .agg(pl.all().sort_by('business_day_count').first())
+                .agg(pl.all().sort_by(['business_day_count', 'day_count'], nulls_last=True).first())
             )
 
             if self.key_isnone:
