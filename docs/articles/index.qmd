@@ -2,4 +2,5 @@
 title: builds
 ---
 
-most recent [build](wadoh_raccoon-0.1.1-py3-none-any.whl)
+- [0.1.1 build](wadoh_raccoon-0.1.1-py3-none-any.whl)
+- [0.4.0 build](wadoh_raccoon-0.4.0-py3-none-any.whl)

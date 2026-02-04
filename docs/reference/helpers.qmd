@@ -12,6 +12,8 @@
 | [date_format](#src.wadoh_raccoon.utils.helpers.date_format) | Format Dates |
 | [get_secrets](#src.wadoh_raccoon.utils.helpers.get_secrets) | Get secrets |
 | [gt_style](#src.wadoh_raccoon.utils.helpers.gt_style) | Style for GT Tables |
+| [lazy_height](#src.wadoh_raccoon.utils.helpers.lazy_height) | Output the height of a polars frame regardless of it being lazy or eager |
+| [mft_upload](#src.wadoh_raccoon.utils.helpers.mft_upload) | Upload files to Washington State MFT server |
 | [save_raw_values](#src.wadoh_raccoon.utils.helpers.save_raw_values) | save raw values |
 
 ### clean_name { #src.wadoh_raccoon.utils.helpers.clean_name }
@@ -57,12 +59,15 @@ helpers.gt_style(df_inp=output)
 ### date_format { #src.wadoh_raccoon.utils.helpers.date_format }
 
 ```python
-wadoh_raccoon.utils.helpers.date_format(df: pl.DataFrame, col: str)
+wadoh_raccoon.utils.helpers.date_format(
+    df: pl.DataFrame | pl.LazyFrame,
+    col: str,
+)
 ```
 
 Format Dates
 
-Convert string dates into a yyyy-mm-dd format. 
+Convert string dates into a yyyy-mm-dd format.
 The function uses pl.coalesce to try to process different formats.
 For example, it will first try to convert m/d/y, and then if that doesn't work it will try d/m/y.
 It's not perfect, but if someone messes up the date it's their fault.
@@ -75,7 +80,7 @@ To be applied to a string date column.
 
 #### Parameters {.doc-section .doc-section-parameters}
 
-<code>[**df**]{.parameter-name} [:]{.parameter-annotation-sep} [pl.DataFrame]{.parameter-annotation}</code>
+<code>[**df**]{.parameter-name} [:]{.parameter-annotation-sep} [pl.DataFrame \| pl.LazyFrame]{.parameter-annotation}</code>
 
 :   a polars dataframe (needed to check if col is pl.Date type or not)
 
@@ -85,7 +90,7 @@ To be applied to a string date column.
 
 #### Returns {.doc-section .doc-section-returns}
 
-<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [pl.Expr: ]{.parameter-annotation}</code>
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [pl.Expr:]{.parameter-annotation}</code>
 
 :   a date column
 
@@ -248,6 +253,137 @@ helpers.gt_style(df_inp=df,index_inp=False)
 Without striping:
 ```{python}
 helpers.gt_style(df_inp=df,add_striping_inp=False)
+```
+
+### lazy_height { #src.wadoh_raccoon.utils.helpers.lazy_height }
+
+```python
+wadoh_raccoon.utils.helpers.lazy_height(lf: pl.DataFrame | pl.LazyFrame)
+```
+
+Output the height of a polars frame regardless of it being lazy or eager
+
+### mft_upload { #src.wadoh_raccoon.utils.helpers.mft_upload }
+
+```python
+wadoh_raccoon.utils.helpers.mft_upload(
+    upload: pl.DataFrame,
+    dir: str,
+    upload_file_name: str,
+    upload_file_extension: str,
+    username: str,
+    password: str,
+    host: str = 'mft.wa.gov',
+)
+```
+
+Upload files to Washington State MFT server
+
+Upload Polars DataFrames to the Washington State Managed File Transfer (MFT) 
+server via SFTP. This function converts DataFrames to various file formats 
+and securely transfers them to specified directories on the MFT server.
+
+**Note: Authentication requires explicit credentials to be provided. The 
+function automatically adds the server's host key for simplified connection 
+handling.
+
+#### Usage {.doc-section .doc-section-usage}
+
+Use this function to upload processed surveillance data, reports, or other 
+DataFrames to the MFT server for sharing with partners. 
+The function handles file format conversion.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**upload**]{.parameter-name} [:]{.parameter-annotation-sep} [polars.DataFrame]{.parameter-annotation}</code>
+
+:   The Polars DataFrame to upload.
+
+<code>[**dir**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   Target directory path on the MFT server (e.g., '/outbound/partner').
+
+<code>[**upload_file_name**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   Name of the file without extension (e.g., 'surveillance_report').
+
+<code>[**upload_file_extension**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   File extension including the dot. Supported formats: '.csv', '.xlsx',  '.json', '.parquet'.
+
+<code>[**username**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   MFT server username.
+
+<code>[**password**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation}</code>
+
+:   MFT server password.
+
+<code>[**host**]{.parameter-name} [:]{.parameter-annotation-sep} [str]{.parameter-annotation} [ = ]{.parameter-default-sep} [\'mft.wa.gov\']{.parameter-default}</code>
+
+:   MFT server hostname. Default is 'mft.wa.gov'.
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [None]{.parameter-annotation}</code>
+
+:   Files are uploaded directly to the MFT server. Success message printed.
+
+#### Raises {.doc-section .doc-section-raises}
+
+<code>[:]{.parameter-annotation-sep} [TypeError]{.parameter-annotation}</code>
+
+:   If upload is not a Polars DataFrame.
+
+<code>[:]{.parameter-annotation-sep} [ValueError]{.parameter-annotation}</code>
+
+:   If upload is empty, required parameters are missing, or  upload_file_extension is not supported.
+
+<code>[:]{.parameter-annotation-sep} [OSError]{.parameter-annotation}</code>
+
+:   If the target directory does not exist or cannot be accessed on the  MFT server.
+
+<code>[:]{.parameter-annotation-sep} [ConnectionError]{.parameter-annotation}</code>
+
+:   If SFTP connection fails.
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+import polars as pl
+from wadoh_raccoon.utils.helpers import mft_upload, get_secrets
+
+# Create sample DataFrame
+df = pl.DataFrame({
+    'case_id': [1, 2, 3],
+    'pathogen': ['Salmonella', 'E. coli', 'Campylobacter']
+})
+
+# Get credentials from Key Vault
+mft_user, mft_pass = get_secrets(
+    'vault_url', 
+    ['mft-username', 'mft-password']
+)
+
+# Upload as CSV
+mft_upload(
+    upload=df,
+    dir='DEV_TESTING',
+    upload_file_name='weekly_report_2024_01',
+    upload_file_extension='.csv',
+    username=mft_user,
+    password=mft_pass
+)
+
+# Upload as Excel
+mft_upload(
+    upload=df,
+    dir='DEV_TESTING',
+    upload_file_name='weekly_report_2024_01',
+    upload_file_extension='.xlsx',
+    username=mft_user,
+    password=mft_pass
+)
 ```
 
 ### save_raw_values { #src.wadoh_raccoon.utils.helpers.save_raw_values }
