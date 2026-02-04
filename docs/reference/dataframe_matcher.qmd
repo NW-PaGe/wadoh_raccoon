@@ -15,22 +15,16 @@
 ```python
 dataframe_matcher.DataFrameMatcher(
     self,
-    df_subm: pl.DataFrame,
+    df_src: pl.DataFrame,
     df_ref: pl.DataFrame,
+    first_name: str | tuple[str, str],
+    last_name: str | tuple[str, str],
+    dob: str | tuple[str, str],
+    spec_col_date: str | tuple[str, str],
+    key: str | list | None = None,
     threshold: int | float = 80,
-    first_name: str | None = None,
-    last_name: str | None = None,
-    dob: str | None = None,
-    spec_col_date: str | None = None,
-    first_name_src: str | None = None,
-    last_name_src: str | None = None,
-    dob_src: str | None = None,
-    spec_col_date_src: str | None = None,
-    first_name_ref: str | None = None,
-    last_name_ref: str | None = None,
-    dob_ref: str | None = None,
-    spec_col_date_ref: str | None = None,
-    key: str | None = None,
+    day_max: int | None = None,
+    business_day_max: int | None = None,
 )
 ```
 
@@ -42,51 +36,51 @@ patient demographics
 
 #### Parameters {.doc-section .doc-section-parameters}
 
-<code>[**df_subm**]{.parameter-name} [:]{.parameter-annotation-sep} [pl.DataFrame]{.parameter-annotation}</code>
+<code>[**df_src**]{.parameter-name} [:]{.parameter-annotation-sep} [pl.DataFrame]{.parameter-annotation}</code>
 
-:   Submissions dataframe containing Key(s), patient demographics (if available), and the submission data.
+:   Source dataframe containing any Key(s) and patient demographics.
 
 <code>[**df_ref**]{.parameter-name} [:]{.parameter-annotation-sep} [pl.DataFrame]{.parameter-annotation}</code>
 
-:   reference queried dataframe with CASE_ID, columns potentially containing the key, patient demographics.
+:   Reference queried dataframe containing patient demographics.
 
-<code>[**first_name_ref**]{.parameter-name} [:]{.parameter-annotation-sep} [str \| None]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
+<code>[**first_name**]{.parameter-name} [:]{.parameter-annotation-sep} [str \| tuple\[str, str\]]{.parameter-annotation}</code>
 
-:   first name column from reference_df
+:   The first name demographic column name in the source and reference dataframes. If the names are different, they should be provided in a tuple containing the source name first, followed by the reference name.
 
-<code>[**last_name_ref**]{.parameter-name} [:]{.parameter-annotation-sep} [str \| None]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
+<code>[**last_name**]{.parameter-name} [:]{.parameter-annotation-sep} [str \| tuple\[str, str\]]{.parameter-annotation}</code>
 
-:   last name column from reference_df
+:   The last name demographic column name in the source and reference dataframes. If the names are different, they should be provided in a tuple containing the source name first, followed by the reference name.
 
-<code>[**dob_ref**]{.parameter-name} [:]{.parameter-annotation-sep} [str \| None]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
+<code>[**dob**]{.parameter-name} [:]{.parameter-annotation-sep} [str \| tuple\[str, str\]]{.parameter-annotation}</code>
 
-:   dob column from reference_df
+:   The birth date demographic column name in the source and reference dataframes. If the names are different, they should be provided in a tuple containing the source name first, followed by the reference name.
 
-<code>[**spec_col_date_ref**]{.parameter-name} [:]{.parameter-annotation-sep} [str \| None]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
+<code>[**spec_col_date**]{.parameter-name} [:]{.parameter-annotation-sep} [str \| tuple\[str, str\]]{.parameter-annotation}</code>
 
-:   specimen collection date column name in reference_df
+:   The specimen collection date column name in the source and reference dataframes. If the names are different, they should be provided in a tuple containing the source name first, followed by the reference name.
 
-<code>[**first_name_src**]{.parameter-name} [:]{.parameter-annotation-sep} [str \| None]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
+<code>[**key**]{.parameter-name} [:]{.parameter-annotation-sep} [str \| list \| None]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
 
-:   first name column
+:   The key (or list of keys) which group to a distinct source record. Only one match can be returned per distinct key. If no key given, each row in the source df will be treated as a distinct record to be matched.
 
-<code>[**last_name_src**]{.parameter-name} [:]{.parameter-annotation-sep} [str \| None]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
+<code>[**threshold**]{.parameter-name} [:]{.parameter-annotation-sep} [int \| float]{.parameter-annotation} [ = ]{.parameter-default-sep} [80]{.parameter-default}</code>
 
-:   last name column
+:   The inclusive fuzzy scoring threshold used to filter fuzzy matches. Matches with a score  at or above the threshold will be returned in the fuzzy matched object. Defaults to 80.
 
-<code>[**dob_src**]{.parameter-name} [:]{.parameter-annotation-sep} [str \| None]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
+<code>[**day_max**]{.parameter-name} [:]{.parameter-annotation-sep} [int \| None]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
 
-:   last name column
+:   The max number of days between reference and source specimen collection dates a fuzzy matched record can have and be returned as a match
 
-<code>[**spec_col_date_src**]{.parameter-name} [:]{.parameter-annotation-sep} [str \| None]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
+<code>[**business_day_max**]{.parameter-name} [:]{.parameter-annotation-sep} [int \| None]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
 
-:   specimen collection date column name in submissions_df
+:   The max number of business days between reference and source specimen collection dates a fuzzy matched record can have and be returned as a match. Business days are counted as weekdays (holidays are not accounted for).
 
 #### Returns {.doc-section .doc-section-returns}
 
 <code>[**fuzzy_matched_review**]{.parameter-name} [:]{.parameter-annotation-sep} [pl.DataFrame]{.parameter-annotation}</code>
 
-:   records that successfully fuzzy matched (still send to be reviewed)
+:   records that successfully fuzzy matched
 
 <code>[**fuzzy_without_demo**]{.parameter-name} [:]{.parameter-annotation-sep} [pl.DataFrame]{.parameter-annotation}</code>
 
@@ -118,7 +112,7 @@ your_df = pl.DataFrame({
     'first_name': ['DAVIS', 'DAVIS', 'GRANT'],
     'last_name': ['SMITHDAVIS', 'SMITHDAVIS', 'MITHCELL'],
     'sub_collection_date': [date(2024, 11, 29), date(2024, 11, 29), date(2024, 12, 2)],
-    'sub_dob': [date(1989, 7, 15), date(1989, 7, 15), date(1990, 6, 21)]
+    'birth_date': [date(1989, 7, 15), date(1989, 7, 15), date(1990, 6, 21)]
 })
 
 reference_df = pl.DataFrame({
@@ -126,25 +120,21 @@ reference_df = pl.DataFrame({
     'first_name_reference': ['DAVID', 'DAVID', 'TRASH'],
     'last_name_reference': ['SMITDAVIS', 'SMITDAVIS', 'PANDA'],
     'ref_collection_date': [date(2024, 11, 29), date(2024, 8, 31), date(2024, 8, 31)],
-    'ref_dob': [date(1989, 7, 15), date(1989, 7, 15), date(1990, 6, 21)]
+    'birth_date': [date(1989, 7, 15), date(1989, 7, 15), date(1990, 6, 21)]
 })
 ```
 
 **Step 3:** Initalize the fuzzy matching class and input which dataframes and columns you are matching on
 ```{python}
 fuzzy_init = dfm.DataFrameMatcher(
-    df_subm=your_df,
+    df_src=your_df,
     df_ref=reference_df,
-    first_name_ref='first_name_reference',
-    last_name_ref='last_name_reference',
-    dob_ref='ref_dob',
-    spec_col_date_ref='ref_collection_date',
-    first_name_src='first_name',
-    last_name_src='last_name',
-    dob_src='sub_dob',
-    spec_col_date_src='sub_collection_date',
+    first_name=('first_name', 'first_name_reference'),
+    last_name=('last_name', 'last_name_reference'),
+    dob='birth_date',
+    spec_col_date=('sub_collection_date', 'ref_collection_date'),
     key='submission_number',
-    threshold=80 # set what kind of fuzzy threshold you want, 100 being exact match
+    threshold=80  # set what kind of fuzzy threshold you want, 100 being exact match
 )
 ```
 

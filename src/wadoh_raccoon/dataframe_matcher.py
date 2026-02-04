@@ -109,7 +109,7 @@ class DataFrameMatcher:
     fuzzy_init = dfm.DataFrameMatcher(
         df_src=your_df,
         df_ref=reference_df,
-        first_name=('first_name', first_name_reference'),
+        first_name=('first_name', 'first_name_reference'),
         last_name=('last_name', 'last_name_reference'),
         dob='birth_date',
         spec_col_date=('sub_collection_date', 'ref_collection_date'),
