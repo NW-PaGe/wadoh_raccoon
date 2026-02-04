@@ -1,3 +1,19 @@
+# [0.4.0](https://github.com/NW-PaGe/wadoh_raccoon/compare/v0.3.0...v0.4.0) (2026-02-04)
+
+
+### Bug Fixes
+
+* push corrected ver and restore del ([b75a720](https://github.com/NW-PaGe/wadoh_raccoon/commit/b75a720874249a6f19b6b7d685efcbd3e2b49f1b))
+
+
+### Features
+
+* accept lf input in dataframe_matcher.py ([924caf5](https://github.com/NW-PaGe/wadoh_raccoon/commit/924caf5bbc84b7a93431aef2bb977bd14d0a98c4))
+* add mft_upload function ([dbaedc4](https://github.com/NW-PaGe/wadoh_raccoon/commit/dbaedc4f306c5c59c88a7d524f956dfb588c1ecb))
+* update helpers ([f4ec01d](https://github.com/NW-PaGe/wadoh_raccoon/commit/f4ec01dda3b87d0c4347d6b7305321896b19d2e3))
+
+
+
 # [0.3.0](https://github.com/NW-PaGe/wadoh_raccoon/compare/v0.2.0...v0.3.0) (2025-10-23)
 
 
