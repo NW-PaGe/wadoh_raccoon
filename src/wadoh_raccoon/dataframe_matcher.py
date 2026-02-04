@@ -5,10 +5,10 @@ from wadoh_raccoon.utils import helpers
 
 
 class DataFrameMatcherResults(BaseModel):
-    exact_matched: pl.DataFrame
-    fuzzy_matched: pl.DataFrame
-    fuzzy_unmatched: pl.DataFrame
-    no_demo: pl.DataFrame
+    exact_matched: pl.DataFrame | pl.LazyFrame
+    fuzzy_matched: pl.DataFrame | pl.LazyFrame
+    fuzzy_unmatched: pl.DataFrame | pl.LazyFrame
+    no_demo: pl.DataFrame | pl.LazyFrame
 
     # Required when using polars dataframes
     model_config = {
@@ -26,32 +26,45 @@ class DataFrameMatcher:
 
     Parameters
     -----------
-    df_subm: pl.DataFrame 
-        Submissions dataframe containing Key(s), patient demographics (if available), and the submission data.
+    df_src: pl.DataFrame 
+        Source dataframe containing any Key(s) and patient demographics.
     df_ref: pl.DataFrame 
-        reference queried dataframe with CASE_ID, columns potentially containing the key, patient demographics. 
-    first_name_ref: str
-        first name column from reference_df
-    last_name_ref: str
-        last name column from reference_df
-    dob_ref: str
-        dob column from reference_df
-    spec_col_date_ref: str
-        specimen collection date column name in reference_df
-    first_name_src: str
-        first name column
-    last_name_src: str
-        last name column
-    dob_src: str
-        last name column
-    spec_col_date_src: str
-        specimen collection date column name in submissions_df
-
+        Reference queried dataframe containing patient demographics. 
+    first_name: str | tuple[str, str]
+        The first name demographic column name in the source and reference dataframes.
+        If the names are different, they should be provided in a tuple containing the
+        source name first, followed by the reference name.
+    last_name: str | tuple[str, str]
+        The last name demographic column name in the source and reference dataframes.
+        If the names are different, they should be provided in a tuple containing the
+        source name first, followed by the reference name.
+    dob: str | tuple[str, str]
+        The birth date demographic column name in the source and reference dataframes.
+        If the names are different, they should be provided in a tuple containing the
+        source name first, followed by the reference name.
+    spec_col_date: str | tuple[str, str]
+        The specimen collection date column name in the source and reference dataframes.
+        If the names are different, they should be provided in a tuple containing the
+        source name first, followed by the reference name.
+    key: str | list (optional)
+        The key (or list of keys) which group to a distinct source record. Only one match can be
+        returned per distinct key. If no key given, each row in the source df will be treated as
+        a distinct record to be matched.
+    threshold: int | float (optional)
+        The inclusive fuzzy scoring threshold used to filter fuzzy matches. Matches with a score 
+        at or above the threshold will be returned in the fuzzy matched object. Defaults to 80.
+    day_max: int (optional)
+        The max number of days between reference and source specimen collection dates a fuzzy matched record
+        can have and be returned as a match
+    business_day_max: int (optional)
+        The max number of business days between reference and source specimen collection dates a fuzzy matched
+        record can have and be returned as a match. Business days are counted as weekdays (holidays are
+        not accounted for).
 
     Returns
     -------
     fuzzy_matched_review: pl.DataFrame
-        records that successfully fuzzy matched (still send to be reviewed)
+        records that successfully fuzzy matched
     fuzzy_without_demo: pl.DataFrame
         records missing demographics and can't be matched
     fuzzy_matched_none: pl.DataFrame
@@ -79,7 +92,7 @@ class DataFrameMatcher:
         'first_name': ['DAVIS', 'DAVIS', 'GRANT'],
         'last_name': ['SMITHDAVIS', 'SMITHDAVIS', 'MITHCELL'],
         'sub_collection_date': [date(2024, 11, 29), date(2024, 11, 29), date(2024, 12, 2)],
-        'sub_dob': [date(1989, 7, 15), date(1989, 7, 15), date(1990, 6, 21)]
+        'birth_date': [date(1989, 7, 15), date(1989, 7, 15), date(1990, 6, 21)]
     })
 
     reference_df = pl.DataFrame({
@@ -87,25 +100,21 @@ class DataFrameMatcher:
         'first_name_reference': ['DAVID', 'DAVID', 'TRASH'],
         'last_name_reference': ['SMITDAVIS', 'SMITDAVIS', 'PANDA'],
         'ref_collection_date': [date(2024, 11, 29), date(2024, 8, 31), date(2024, 8, 31)],
-        'ref_dob': [date(1989, 7, 15), date(1989, 7, 15), date(1990, 6, 21)]
+        'birth_date': [date(1989, 7, 15), date(1989, 7, 15), date(1990, 6, 21)]
     })
     ```
 
     **Step 3:** Initalize the fuzzy matching class and input which dataframes and columns you are matching on
     ```{python}
     fuzzy_init = dfm.DataFrameMatcher(
-        df_subm=your_df,
+        df_src=your_df,
         df_ref=reference_df,
-        first_name_ref='first_name_reference',
-        last_name_ref='last_name_reference',
-        dob_ref='ref_dob',
-        spec_col_date_ref='ref_collection_date',
-        first_name_src='first_name',
-        last_name_src='last_name',
-        dob_src='sub_dob',
-        spec_col_date_src='sub_collection_date',
+        first_name=('first_name', first_name_reference'),
+        last_name=('last_name', 'last_name_reference'),
+        dob='birth_date',
+        spec_col_date=('sub_collection_date', 'ref_collection_date'),
         key='submission_number',
-        threshold=80 # set what kind of fuzzy threshold you want, 100 being exact match
+        threshold=80  # set what kind of fuzzy threshold you want, 100 being exact match
     )
     ```
 
@@ -144,78 +153,56 @@ class DataFrameMatcher:
 
     def __init__(
         self, 
-        df_subm: pl.DataFrame, 
+        df_src: pl.DataFrame, 
         df_ref: pl.DataFrame,
+        first_name: str | tuple[str, str],
+        last_name: str | tuple[str, str],
+        dob: str | tuple[str, str],
+        spec_col_date: str | tuple[str, str],
+        key: str | list | None = None,
         threshold: int | float = 80,
-
-        first_name: str | None = None,
-        last_name: str | None = None,
-        dob: str | None = None,
-        spec_col_date: str | None = None,
-
-        first_name_src: str | None = None,
-        last_name_src: str | None = None,
-        dob_src: str | None = None,
-        spec_col_date_src: str | None = None,
-
-        first_name_ref: str | None = None,
-        last_name_ref: str | None = None,
-        dob_ref: str | None = None,
-        spec_col_date_ref: str | None = None,
-
-        key: str | None = None
-        ):
-
-        # Check col name param sets
-        self.__demo_param_checker(first_name, first_name_ref, first_name_src, "first_name")
-        self.__demo_param_checker(last_name, last_name_ref, last_name_src, "last_name")
-        self.__demo_param_checker(dob, dob_ref, dob_src, "dob")
-        self.__demo_param_checker(spec_col_date, spec_col_date_ref, spec_col_date_src, "spec_col_date")
+        day_max: int | None = None,
+        business_day_max: int | None = None
+    ):
 
         # Source and reference data
-        self.df_subm = df_subm
+        self.df_src = df_src
         self.df_ref = df_ref
 
         # Column names
-        if first_name:
-            self.first_name_src = str(first_name)
-            self.first_name_ref = str(first_name)
-        else:
-            self.first_name_src = str(first_name_src)
-            self.first_name_ref = str(first_name_ref)
+        if isinstance(first_name, str):
+            first_name = (first_name, first_name)
+        self.first_name_src, self.first_name_ref = first_name
 
-        if last_name:
-            self.last_name_src = str(last_name)
-            self.last_name_ref = str(last_name)
-        else:
-            self.last_name_src = str(last_name_src)
-            self.last_name_ref = str(last_name_ref)
+        if isinstance(last_name, str):
+            last_name = (last_name, last_name)
+        self.last_name_src, self.last_name_ref = last_name
 
-        if dob:
-            self.dob_src = str(dob)
-            self.dob_ref = str(dob)
-        else:
-            self.dob_src = str(dob_src)
-            self.dob_ref = str(dob_ref)
+        if isinstance(dob, str):
+            dob = (dob, dob)
+        self.dob_src, self.dob_ref = dob
 
-        if spec_col_date:
-            self.spec_col_date_src = str(spec_col_date)
-            self.spec_col_date_ref = str(spec_col_date)
-        else:
-            self.spec_col_date_src = str(spec_col_date_src)
-            self.spec_col_date_ref = str(spec_col_date_ref)
+        if isinstance(spec_col_date, str):
+            spec_col_date = (spec_col_date, spec_col_date)
+        self.spec_col_date_src, self.spec_col_date_ref = spec_col_date
 
         # submission key
         if key is None:
-            self.key = '___key___'
             self.key_isnone = True
-            self.df_subm = self.df_subm.with_row_index(name=self.key)
+            self.key = ['___key___']
+            self.df_src = self.df_src.with_row_index(name=self.key[0])
         else:
-            self.key = key
             self.key_isnone = False
-
+            if isinstance(key, str):
+                key = [key]
+            self.key = key
+        
         # threshold
         self.threshold = threshold
+
+        # day thresholds
+        self.day_max = day_max
+        self.business_day_max = business_day_max
 
     @staticmethod
     def __prep_df(df, first_name, last_name, spec_col_date, dob, output_spec_col_name, output_dob_name):
@@ -233,11 +220,6 @@ class DataFrameMatcher:
         )
 
         return clean_df
-
-    @staticmethod
-    def __demo_param_checker(param, param_src, param_ref, param_name):
-        if param is None and (param_src is None or param_ref is None):
-            raise ValueError(f"`{param_name}` or both `{param_name}_src` and `{param_name}_ref` must not be None")
 
     def clean_all(self) -> (pl.DataFrame, pl.DataFrame):
 
@@ -260,7 +242,7 @@ class DataFrameMatcher:
 
         submissions_to_fuzzy_prep = (
             self.__prep_df(
-                df=self.df_subm,
+                df=self.df_src,
                 first_name=self.first_name_src,
                 last_name=self.last_name_src,
                 spec_col_date=self.spec_col_date_src,
@@ -312,9 +294,7 @@ class DataFrameMatcher:
                 date_subtract = (pl.col('submitted_collection_date') - pl.col('reference_collection_date')).abs()
             )
             # for ones with multiple matches, pull the closest match based on collection date
-            # .group_by(self.key)
-            # .agg([pl.all().sort_by('date_subtract').first()])
-            .sort(by=[self.key,'date_subtract'], nulls_last=True)
+            .sort(by=self.key+['date_subtract'], nulls_last=True)
             .unique(subset=self.key, keep='first')
         )
 
@@ -323,6 +303,10 @@ class DataFrameMatcher:
             .filter(pl.col(indicator).is_not_null())  # Keep only fields with ref_prep joined
             .drop(indicator)  # Drop the temp indicator col
         )
+
+        # Drop key if created during matching
+        if self.key_isnone:
+            exact_match = exact_match.drop(self.key)
 
         needs_fuzzy_match = (
             potential_matches
@@ -462,13 +446,32 @@ class DataFrameMatcher:
 
         # ------- Fuzzy Matching ------- #
 
-        if dob_match.height > 0:
-            multiple_matches_ratios = self.score(dob_match.lazy()).collect()
+        if helpers.lazy_height(dob_match) > 0:
+            multiple_matches_ratios = (
+                self.score(dob_match.lazy())
+                # Get a date range calculation of days between submitted collection date and ref collection date
+                .with_columns(
+                    day_count=
+                    pl.col('reference_collection_date').sub(pl.col('submitted_collection_date')).dt.total_days().abs(),
+                    business_day_count=
+                    pl.business_day_count(start='submitted_collection_date', end='reference_collection_date').abs()
+                )
+            )
 
-            # Get ones that matched on ratio >= threshold
+            # Get ones that matched on ratio >= threshold and pass day checks (if applicable)
             multiple_matches_ratios_final = multiple_matches_ratios.filter(
                 pl.col('match_ratio').ge(self.threshold) | pl.col('reverse_match_ratio').ge(self.threshold)
             )
+
+            if self.day_max:
+                multiple_matches_ratios_final = multiple_matches_ratios_final.filter(
+                    pl.col('day_count').le(self.day_max)
+                )
+
+            if self.business_day_max:
+                multiple_matches_ratios_final = multiple_matches_ratios_final.filter(
+                    pl.col('business_day_count').le(self.business_day_max)
+                )
 
             # get the top matches of the groups with no score meeting the threshold
             fuzzy_unmatched = (
@@ -479,21 +482,29 @@ class DataFrameMatcher:
                 .with_columns(pl.max_horizontal('match_ratio', 'reverse_match_ratio').alias('max_ratio'))
                 # Select the match with the highest ratio within each group
                 .group_by(self.key)
-                .agg(pl.all().sort_by('max_ratio', descending=True).first())
-                .drop('max_ratio')
+                .agg(
+                    pl.all()
+                    .sort_by(['max_ratio', 'business_day_count', 'day_count'], descending=[True, False, False], nulls_last=True)
+                    .first()
+                )
+                .drop('max_ratio', 'day_count', 'business_day_count')
             )
 
             # here we need to group by key and select row with the closest collection date difference
             fuzzy_matched = (
                 multiple_matches_ratios_final
-                .with_columns(
-                    # Get a date range calculation of days between submitted collection date and ref collection date
-                    business_day_count=pl.business_day_count("submitted_collection_date", "reference_collection_date").abs()
-                )
-                .group_by(pl.col(self.key))
-                .agg(pl.all().sort_by('business_day_count').first())
+                .group_by(self.key)
+                .agg(pl.all().sort_by(['business_day_count', 'day_count'], nulls_last=True).first())
             )
 
+            if self.key_isnone:
+                fuzzy_matched = fuzzy_matched.drop(self.key)
+                fuzzy_unmatched = fuzzy_unmatched.drop(self.key)
+                
+            if isinstance(dob_match, pl.DataFrame):
+                fuzzy_matched = fuzzy_matched.collect()
+                fuzzy_unmatched = fuzzy_unmatched.collect()
+                
         return fuzzy_matched, fuzzy_unmatched
 
     def __output_summary(
@@ -517,48 +528,46 @@ class DataFrameMatcher:
             how = "diagonal_relaxed")
 
         # anti_join outputs to see if any data is missing from the outputs from the original df
-        check_data_leaks = (
-            submissions_to_fuzzy_df
-            .join(all_outputs, on=self.key,how="anti")
-            .select(pl.len()).item()
+        check_data_leaks = helpers.lazy_height(
+            submissions_to_fuzzy_df.join(all_outputs, on=self.key, how="anti")
         )
 
         # try the opposite anti join
-        check_data_leaks_reverse = (
-            all_outputs
-            .join(submissions_to_fuzzy_df, on=self.key,how="anti")
-            .select(pl.len()).item()
+        check_data_leaks_reverse = helpers.lazy_height(
+            all_outputs.join(submissions_to_fuzzy_df, on=self.key, how="anti")
         )
 
         # Output errors if any data leaks happen!
         if check_data_leaks > 0 or check_data_leaks_reverse > 0:
             print("ERROR!! Fuzzy data leaked. Data are in submissions_to_fuzzy_df that cannot be found in fuzzy outputs")
             print("Total processed: ",
-                fuzzy_matched_df.shape[0] +
-                fuzzy_without_demo_df.shape[0] +
-                exact_match_df.shape[0] +
-                fuzzy_unmatched_df.shape[0],
+                helpers.lazy_height(fuzzy_matched_df) +
+                helpers.lazy_height(fuzzy_without_demo_df) +
+                helpers.lazy_height(exact_match_df) +
+                helpers.lazy_height(fuzzy_unmatched_df),
                 "\nOriginal submissions to fuzzy (including no_match rematch attempt):",
-                submissions_to_fuzzy_df.shape[0]
+                helpers.lazy_height(submissions_to_fuzzy_df)
             )
             raise pl.exceptions.PolarsError("ERROR!! Fuzzy data leaked. Data are in submissions_to_fuzzy_df that cannot be found in fuzzy outputs")
         else:
             print("Success: No data leaks detected. Insert victory cigar")
 
         # ------ Results ------ #
-        print(exact_match_df.shape[0], "exact matches")
-        print(fuzzy_matched_df.shape[0], "fuzzy matched")
-        print(fuzzy_unmatched_df.shape[0], "no match found")
-        print(fuzzy_without_demo_df.shape[0], "records without demo\n")
+        em_height = helpers.lazy_height(exact_match_df)
+        fm_height = helpers.lazy_height(fuzzy_matched_df)
+        fum_height = helpers.lazy_height(fuzzy_unmatched_df)
+        fwd_height = helpers.lazy_height(fuzzy_without_demo_df)
+
+        print(em_height, "exact matches")
+        print(fm_height, "fuzzy matched")
+        print(fum_height, "no match found")
+        print(fwd_height, "records without demo\n")
         
 
         print("Total unique persons processed: ",
-            fuzzy_matched_df.shape[0] +
-            fuzzy_without_demo_df.shape[0] +
-            exact_match_df.shape[0] +
-            fuzzy_unmatched_df.shape[0],
+            em_height + fm_height + fwd_height + fum_height,
             "\nOriginal submissions to fuzzy (including no_match rematch attempt):",
-            submissions_to_fuzzy_df.shape[0]
+            helpers.lazy_height(submissions_to_fuzzy_df)
         )
 
     def match(self, verbose=True):

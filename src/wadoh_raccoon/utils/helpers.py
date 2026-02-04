@@ -1,4 +1,6 @@
 import polars as pl
+import paramiko
+from io import BytesIO
 from datetime import datetime
 from datetime import date
 from great_tables import GT, md, style, loc, google_font
@@ -42,14 +44,14 @@ def clean_name(col: str) -> pl.Expr:
     """
     return pl.col(col).str.replace_all('[^a-zA-Z]', '').str.to_uppercase()
 
-def date_format(df: pl.DataFrame,col: str):
+def date_format(df: pl.DataFrame | pl.LazyFrame,col: str):
     """ Format Dates
 
-    Convert string dates into a yyyy-mm-dd format. 
+    Convert string dates into a yyyy-mm-dd format.
     The function uses pl.coalesce to try to process different formats.
     For example, it will first try to convert m/d/y, and then if that doesn't work it will try d/m/y.
     It's not perfect, but if someone messes up the date it's their fault.
-    
+
     **Note: it won't attempt to convert excel dates. If someone sends us excel dates we will file a lawsuit.**
 
     Usage
@@ -62,13 +64,13 @@ def date_format(df: pl.DataFrame,col: str):
         a polars dataframe (needed to check if col is pl.Date type or not)
     col: str
         a string column that has a date
-    
+
 
     Returns
     -------
-    pl.Expr: 
+    pl.Expr:
         a date column
-    
+
     Examples
     --------
     ```{python}
@@ -86,7 +88,7 @@ def date_format(df: pl.DataFrame,col: str):
             "2022-12-27 08:26:49"
         ]
     })
-    
+
     output = (
         df
         .with_columns(
@@ -95,7 +97,7 @@ def date_format(df: pl.DataFrame,col: str):
     )
 
     helpers.gt_style(df_inp=output)
-    
+
     ```
 
     """
@@ -104,9 +106,13 @@ def date_format(df: pl.DataFrame,col: str):
     #     .then(pl.lit('date')).alias("check")
     # )
 
-    if df[col].dtype.is_temporal():
+    if isinstance(df, pl.DataFrame):
+        col_type = df.schema[col]
+    else:
+        col_type = df.collect_schema()[col]
+    if col_type.is_temporal():
         return pl.col(col).cast(pl.Date)
-    
+
 
     return pl.coalesce(
             # see this for date types https://docs.rs/chrono/latest/chrono/format/strftime/index.html
@@ -367,3 +373,194 @@ def gt_style(
 
 
     return table
+
+def mft_upload(
+    upload: pl.DataFrame,
+    dir: str,
+    upload_file_name: str,
+    upload_file_extension: str,
+    username: str,
+    password: str,
+    host: str = "mft.wa.gov"
+) -> None:
+    """Upload files to Washington State MFT server
+
+    Upload Polars DataFrames to the Washington State Managed File Transfer (MFT) 
+    server via SFTP. This function converts DataFrames to various file formats 
+    and securely transfers them to specified directories on the MFT server.
+
+    **Note: Authentication requires explicit credentials to be provided. The 
+    function automatically adds the server's host key for simplified connection 
+    handling.
+    
+    Usage
+    -----
+    Use this function to upload processed surveillance data, reports, or other 
+    DataFrames to the MFT server for sharing with partners. 
+    The function handles file format conversion.
+    
+    Parameters
+    ----------
+    upload : polars.DataFrame
+        The Polars DataFrame to upload.
+    dir : str
+        Target directory path on the MFT server (e.g., '/outbound/partner').
+    upload_file_name : str
+        Name of the file without extension (e.g., 'surveillance_report').
+    upload_file_extension : str
+        File extension including the dot. Supported formats: '.csv', '.xlsx', 
+        '.json', '.parquet'.
+    username : str
+        MFT server username.
+    password : str
+        MFT server password.
+    host : str, optional
+        MFT server hostname. Default is 'mft.wa.gov'.
+    
+    Returns
+    -------
+    None
+        Files are uploaded directly to the MFT server. Success message printed.
+    
+    Raises
+    ------
+    TypeError
+        If upload is not a Polars DataFrame.
+    ValueError
+        If upload is empty, required parameters are missing, or 
+        upload_file_extension is not supported.
+    OSError
+        If the target directory does not exist or cannot be accessed on the 
+        MFT server.
+    ConnectionError
+        If SFTP connection fails.
+    
+    Examples
+    --------
+    ```python
+    import polars as pl
+    from wadoh_raccoon.utils.helpers import mft_upload, get_secrets
+    
+    # Create sample DataFrame
+    df = pl.DataFrame({
+        'case_id': [1, 2, 3],
+        'pathogen': ['Salmonella', 'E. coli', 'Campylobacter']
+    })
+    
+    # Get credentials from Key Vault
+    mft_user, mft_pass = get_secrets(
+        'vault_url', 
+        ['mft-username', 'mft-password']
+    )
+    
+    # Upload as CSV
+    mft_upload(
+        upload=df,
+        dir='DEV_TESTING',
+        upload_file_name='weekly_report_2024_01',
+        upload_file_extension='.csv',
+        username=mft_user,
+        password=mft_pass
+    )
+    
+    # Upload as Excel
+    mft_upload(
+        upload=df,
+        dir='DEV_TESTING',
+        upload_file_name='weekly_report_2024_01',
+        upload_file_extension='.xlsx',
+        username=mft_user,
+        password=mft_pass
+    )
+    ```
+    """
+    
+    # Input validation
+    if not isinstance(upload, pl.DataFrame):
+        raise TypeError(f"upload must be a Polars DataFrame, got {type(upload)}")
+    
+    if upload.is_empty():
+        raise ValueError("Cannot upload empty DataFrame")
+    
+    if not dir or not upload_file_name:
+        raise ValueError("dir and upload_file_name cannot be empty")
+    
+    # Supported file extensions
+    supported_extensions = {'.csv', '.xlsx', '.json', '.parquet'}
+    if upload_file_extension not in supported_extensions:
+        raise ValueError(
+            f"Unsupported file type: {upload_file_extension}. "
+            f"Supported formats: {', '.join(sorted(supported_extensions))}"
+        )
+    
+    # Convert DataFrame to bytes based on extension
+    try:
+        if upload_file_extension == ".csv":
+            upload_file = upload.write_csv().encode('utf-8')
+        elif upload_file_extension == ".xlsx":
+            buffer = BytesIO()
+            upload.write_excel(buffer)
+            upload_file = buffer.getvalue()
+        elif upload_file_extension == ".json":
+            upload_file = upload.write_json().encode('utf-8')
+        elif upload_file_extension == ".parquet":
+            buffer = BytesIO()
+            upload.write_parquet(buffer)
+            upload_file = buffer.getvalue()
+        else:
+            # Should never reach here due to earlier validation
+            raise ValueError(f"Unsupported extension: {upload_file_extension}")
+    except Exception as e:
+        raise ValueError(f"Failed to convert DataFrame to {upload_file_extension}: {e}")
+    
+    # Establish SFTP connection and upload
+    client = paramiko.SSHClient()
+    
+    try:
+        # Automatically add host keys
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        # Connect to MFT server
+        client.connect(
+            hostname=host,
+            username=username,
+            password=password
+        )
+        
+        # Open SFTP session
+        sftp = client.open_sftp()
+        
+        try:
+            # Define upload path
+            upload_path = f"{dir}/{upload_file_name}{upload_file_extension}"
+            
+            # Write file to remote server (binary mode)
+            with sftp.open(upload_path, 'wb') as remote_file:
+                remote_file.write(upload_file)
+            
+            print(f"Successfully uploaded {upload.shape[0]} rows to {upload_path}")
+            
+        except (OSError, IOError) as e:
+            raise OSError(
+                f"Failed to upload to {upload_path}. "
+                f"Verify directory '{dir}' exists and is accessible. Error: {e}"
+            )
+        finally:
+            sftp.close()
+            
+    except paramiko.AuthenticationException:
+        raise ConnectionError("Authentication failed. Check username and password.")
+    except paramiko.SSHException as e:
+        raise ConnectionError(f"SSH connection error: {e}")
+    except Exception as e:
+        raise ConnectionError(f"Unexpected error during SFTP upload: {e}")
+    finally:
+        client.close()
+        
+def lazy_height(lf: pl.DataFrame | pl.LazyFrame):
+    """Output the height of a polars frame regardless of it being lazy or eager"""
+    if isinstance(lf, pl.LazyFrame):
+        return lf.select(pl.len()).collect().item()
+    else:
+        return lf.height
+

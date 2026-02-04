@@ -2,77 +2,105 @@ import polars as pl
 from wadoh_raccoon.utils import helpers
 from wadoh_raccoon import dataframe_matcher
 import pytest
+import itertools
+from pathlib import Path
+
+
+TEST_DATA_DIR = Path(__file__).parent / "data"
 
 @pytest.fixture
-def get_data():
+def phl():
 
-    phl = pl.read_csv("tests/respnet/phl_test_data.csv")
+    phl = pl.read_csv(TEST_DATA_DIR / "phl_test_data.csv")
 
     received_submissions_df = helpers.save_raw_values(phl,'PHLAccessionNumber')
 
-    base_cols = ["submission_number", "internal_create_date"] + phl.columns 
-
-    phl_df = (
+    return (
         received_submissions_df
         .unnest(pl.col('raw_inbound_submission'))
-        .select(sorted(base_cols))
+        .select([
+            'PatientFirstName',
+            'PatientLastName',
+            'PatientBirthDate',
+            'SpecimenDateCollected',
+            'submission_number',
+            'internal_create_date'
+        ])
     )
 
-    wdrs = pl.read_csv("tests/respnet/phl_test_data_reference.csv")
+@pytest.fixture
+def wdrs():
+    return pl.read_csv(TEST_DATA_DIR / "phl_test_data_reference.csv")
 
-    input_subm = phl_df.select([
-        'PatientFirstName',
-        'PatientLastName',
-        'PatientBirthDate',
-        'SpecimenDateCollected',
-        'submission_number',
-        'internal_create_date'])
+def matcher(phl, wdrs, lazy, day_max, business_day_max):
+
+    if lazy == 'lazy':
+        phl = phl.lazy()
+        wdrs = wdrs.lazy()
 
     instance = dataframe_matcher.DataFrameMatcher(
-        df_subm=input_subm,
+        df_src=phl,
         df_ref=wdrs,
-
-        first_name_ref='FIRST_NAME',
-        last_name_ref='LAST_NAME',
-        dob_ref='DOB',
-        spec_col_date_ref='SPECIMEN_COLLECTION_DATE',
-
-        first_name_src='PatientFirstName',
-        last_name_src='PatientLastName',
-        dob_src='PatientBirthDate',
-        spec_col_date_src='SpecimenDateCollected',
-        
+        first_name=('PatientFirstName', 'FIRST_NAME'),
+        last_name=('PatientLastName', 'LAST_NAME'),
+        dob=('PatientBirthDate', 'DOB'),
+        spec_col_date=('SpecimenDateCollected', 'SPECIMEN_COLLECTION_DATE'),
         key='submission_number',
-        threshold=80
+        threshold=80,
+        day_max=day_max,
+        business_day_max=business_day_max
     )
-
-    # fuzz_matched, fuzz_unmatched = instance.fuzzy_match()
 
     result = instance.match()
 
-    return result
-
-def test_matched(get_data):
-
-    result = get_data
-
-    assert result.fuzzy_matched.height == 4
+    return result, day_max, business_day_max
 
 
-def test_unmatched(get_data):
+# set parameters to test
+# for each in lazy and eager, test day_max==None,1,4 and business_day_max==None,1,4
+lazy_vals = ['lazy', 'eager']
+day_vals = [None, 1, 4]
 
-    result = get_data
 
-    assert result.fuzzy_unmatched.height == 4
+params = list(itertools.product(lazy_vals, day_vals, day_vals))
 
-def test_exact_match(get_data):
+# set an id so that pytest gives a human readable output
+# like tests/respnet/test_dataframe_matcher.py::test_matched[lazy=lazy-day=1-bizday=1] PASSED
+def make_id(param):
+    lazy, day_max, business_day_max = param
+    return f"lazy={lazy}-day={day_max}-bizday={business_day_max}"
 
-    result = get_data
+@pytest.fixture(params=params, ids=make_id)
+# @pytest.fixture(params=list(itertools.product(lazy_vals, day_vals, day_vals)))
+def result(phl, wdrs, request):
+    lazy, day_max, business_day_max = request.param
+    return matcher(phl, wdrs, lazy, day_max, business_day_max)
 
-    assert result.exact_matched.height == 2
 
-def test_no_demo(get_data):
+def test_matched(result):
+    output, day_max, business_day_max = result
+    if day_max is None and business_day_max is None:
+        expected_height = 4
+    elif day_max in {None, 4} and business_day_max in {None, 4}:
+        expected_height = 3
+    else:
+        expected_height = 2
+    assert helpers.lazy_height(output.fuzzy_matched) == expected_height
 
-    result = get_data
+def test_unmatched(result):
+    output, day_max, business_day_max = result
+    if day_max is None and business_day_max is None:
+        expected_height = 4
+    elif day_max in {None, 4} and business_day_max in {None, 4}:
+        expected_height = 5
+    else:
+        expected_height = 6
+    assert helpers.lazy_height(output.fuzzy_unmatched) == expected_height
 
-    assert result.no_demo.height == 1
+def test_exact_match(result):
+    output, day_max, business_day_max = result
+    assert helpers.lazy_height(output.exact_matched) == 2
+
+def test_no_demo(result):
+    output, day_max, business_day_max = result
+    assert helpers.lazy_height(output.no_demo) == 1
