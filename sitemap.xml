@@ -2,18 +2,26 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://NW-PaGe.github.io/wadoh_raccoon/reference/index.html</loc>
-    <lastmod>2025-03-24T15:24:37.308Z</lastmod>
+    <lastmod>2026-02-04T20:19:14.820Z</lastmod>
+  </url>
+  <url>
+    <loc>https://NW-PaGe.github.io/wadoh_raccoon/reference/dataframe_matcher.html</loc>
+    <lastmod>2026-02-04T20:19:37.321Z</lastmod>
   </url>
   <url>
     <loc>https://NW-PaGe.github.io/wadoh_raccoon/index.html</loc>
-    <lastmod>2025-03-24T16:07:52.897Z</lastmod>
+    <lastmod>2026-02-04T20:19:37.319Z</lastmod>
   </url>
   <url>
     <loc>https://NW-PaGe.github.io/wadoh_raccoon/articles/index.html</loc>
-    <lastmod>2025-03-24T15:38:31.951Z</lastmod>
+    <lastmod>2026-02-04T20:19:37.315Z</lastmod>
+  </url>
+  <url>
+    <loc>https://NW-PaGe.github.io/wadoh_raccoon/reference/azure.html</loc>
+    <lastmod>2026-02-04T20:19:14.819Z</lastmod>
   </url>
   <url>
     <loc>https://NW-PaGe.github.io/wadoh_raccoon/reference/helpers.html</loc>
-    <lastmod>2025-03-21T21:31:19.464Z</lastmod>
+    <lastmod>2026-02-04T20:19:37.322Z</lastmod>
   </url>
 </urlset>
