@@ -26,9 +26,9 @@ class DataFrameMatcher:
 
     Parameters
     -----------
-    df_src: pl.DataFrame 
+    df_src: pl.DataFrame | pl.LazyFrame
         Source dataframe containing any Key(s) and patient demographics.
-    df_ref: pl.DataFrame 
+    df_ref: pl.DataFrame | pl.LazyFrame
         Reference queried dataframe containing patient demographics. 
     first_name: str | tuple[str, str]
         The first name demographic column name in the source and reference dataframes.
@@ -63,13 +63,13 @@ class DataFrameMatcher:
 
     Returns
     -------
-    fuzzy_matched_review: pl.DataFrame
+    fuzzy_matched_review: pl.DataFrame | pl.LazyFrame
         records that successfully fuzzy matched
-    fuzzy_without_demo: pl.DataFrame
+    fuzzy_without_demo: pl.DataFrame | pl.LazyFrame
         records missing demographics and can't be matched
-    fuzzy_matched_none: pl.DataFrame
+    fuzzy_matched_none: pl.DataFrame | pl.LazyFrame
         records that did not have any match
-    fuzzy_matched_roster: pl.DataFrame
+    fuzzy_matched_roster: pl.DataFrame | pl.LazyFrame
         records that had an exact match to reference dataframe
 
     Examples
@@ -153,8 +153,8 @@ class DataFrameMatcher:
 
     def __init__(
         self, 
-        df_src: pl.DataFrame, 
-        df_ref: pl.DataFrame,
+        df_src: pl.DataFrame | pl.LazyFrame, 
+        df_ref: pl.DataFrame | pl.LazyFrame,
         first_name: str | tuple[str, str],
         last_name: str | tuple[str, str],
         dob: str | tuple[str, str],
@@ -221,7 +221,7 @@ class DataFrameMatcher:
 
         return clean_df
 
-    def clean_all(self) -> (pl.DataFrame, pl.DataFrame):
+    def clean_all(self) -> (pl.DataFrame | pl.LazyFrame, pl.DataFrame | pl.LazyFrame):
 
         ref_prep = (
             self.__prep_df(
@@ -255,7 +255,7 @@ class DataFrameMatcher:
         return ref_prep, submissions_to_fuzzy_prep
 
     @staticmethod
-    def filter_demo(submissions_to_fuzzy_prep) -> (pl.DataFrame, pl.DataFrame):
+    def filter_demo(submissions_to_fuzzy_prep) -> (pl.DataFrame | pl.LazyFrame, pl.DataFrame | pl.LazyFrame):
 
         # 2. Split by presence of demographics and specimen collection date
         fuzzy_with_demo = (
@@ -278,7 +278,7 @@ class DataFrameMatcher:
         return fuzzy_with_demo, fuzzy_without_demo
 
 
-    def find_exact_match(self, ref_prep, fuzzy_with_demo) -> (pl.DataFrame, pl.DataFrame):
+    def find_exact_match(self, ref_prep, fuzzy_with_demo) -> (pl.DataFrame | pl.LazyFrame, pl.DataFrame | pl.LazyFrame):
 
         indicator = '___indicator___'  # Name for temp indicator col to determine join outcome
 
@@ -384,7 +384,7 @@ class DataFrameMatcher:
             )
         )
 
-    def fuzzy_match(self, dob_match) -> (pl.DataFrame, pl.DataFrame):
+    def fuzzy_match(self, dob_match) -> (pl.DataFrame | pl.LazyFrame, pl.DataFrame | pl.LazyFrame):
         """ 
 
         Where the magic happens. Do the fuzzy matching to the dataframe
@@ -441,8 +441,8 @@ class DataFrameMatcher:
         """
 
         # ----- Init variables ----- #
-        fuzzy_matched = pl.DataFrame()
-        fuzzy_unmatched = pl.DataFrame()
+        fuzzy_matched = pl.LazyFrame()
+        fuzzy_unmatched = pl.LazyFrame()
 
         # ------- Fuzzy Matching ------- #
 
@@ -501,9 +501,9 @@ class DataFrameMatcher:
                 fuzzy_matched = fuzzy_matched.drop(self.key)
                 fuzzy_unmatched = fuzzy_unmatched.drop(self.key)
                 
-            if isinstance(dob_match, pl.DataFrame):
-                fuzzy_matched = fuzzy_matched.collect()
-                fuzzy_unmatched = fuzzy_unmatched.collect()
+        if isinstance(dob_match, pl.DataFrame):
+            fuzzy_matched = fuzzy_matched.collect()
+            fuzzy_unmatched = fuzzy_unmatched.collect()
                 
         return fuzzy_matched, fuzzy_unmatched
 
