@@ -1,3 +1,12 @@
+## [0.4.1](https://github.com/NW-PaGe/wadoh_raccoon/compare/v0.4.0...v0.4.1) (2026-03-24)
+
+
+### Bug Fixes
+
+* update dataframe_matcher.py ([c952aa3](https://github.com/NW-PaGe/wadoh_raccoon/commit/c952aa3b004088a1ac77e1bc06c8aa84276574c4))
+
+
+
 # [0.4.0](https://github.com/NW-PaGe/wadoh_raccoon/compare/v0.3.0...v0.4.0) (2026-02-04)
 
 
@@ -51,15 +60,6 @@
 ### Bug Fixes
 
 * remove alias output name from date_format func ([80ae38c](https://github.com/NW-PaGe/wadoh_raccoon/commit/80ae38c03df17bcd480727898a069409a76ca67f))
-
-
-
-# [0.1.0](https://github.com/NW-PaGe/wadoh_raccoon/compare/a535518ce297684babe674c1e6e60d08addacdd4...v0.1.0) (2025-03-13)
-
-
-### Bug Fixes
-
-* testing a patch ([a535518](https://github.com/NW-PaGe/wadoh_raccoon/commit/a535518ce297684babe674c1e6e60d08addacdd4))
 
 
 
