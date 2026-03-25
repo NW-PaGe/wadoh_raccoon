@@ -40,6 +40,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: unit-tests  # This makes sure the build job runs first
 
+    outputs:
+      released: ${{ steps.changelog.outputs.skipped == 'false' }}
+
     steps:
       # Checkout the code
       - uses: actions/checkout@v4
@@ -78,6 +81,13 @@ jobs:
           TAG: ${{ steps.changelog.outputs.tag }}
           CHANGELOG: ${{ steps.changelog.outputs.clean_changelog }}
           FILES: dist/*.tar.gz dist/*.whl
+
+      - name: Upload dist artifacts
+        if: ${{ steps.changelog.outputs.skipped == 'false' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist
+          path: dist/
           
       - name: Push Files for GitHub Action
         if: ${{ steps.changelog.outputs.skipped == 'false' }}
@@ -90,3 +100,42 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  publish:
+    name: publish to pypi
+    needs: build-and-release
+    if: >
+      needs.build-and-release.result == 'success' &&
+      needs.build-and-release.outputs.released == 'true'
+
+    runs-on: ubuntu-latest
+
+    environment: 
+      name: pypi-env
+
+    permissions: 
+      id-token: write
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+
+    - name: Set up Python
+      run: uv python install 3.13
+
+    - name: Download dist artifacts
+      uses: actions/download-artifact@v7
+      with:
+        name: dist
+        path: dist
+
+    - name: Smoke test (wheel)
+      run: uv run --isolated --no-project --with dist/*.whl tests/smoke_test.py
+
+    - name: Smoke test (source distribution)
+      run: uv run --isolated --no-project --with dist/*.tar.gz tests/smoke_test.py
+
+    - name: Publish
+      run: uv publish
