@@ -34,6 +34,12 @@ class TestDataFrameMatcher:
         return pl.read_parquet(exact_matched_test_exp_results_df_path)
 
     @pytest.fixture
+    def exact_matched_test_exp_results_blocked_df(self):
+        """Load the expected exact match output from disk."""
+        exact_matched_test_exp_results_blocked_df_path = TEST_DATA_DIR / "exact_matched_test_exp_results_blocked_df.parquet"
+        return pl.read_parquet(exact_matched_test_exp_results_blocked_df_path)
+
+    @pytest.fixture
     def fuzzy_matched_test_exp_results_df(self):
         """Load the expected fuzzy match output from disk."""
         fuzzy_matched_test_exp_results_df_path = TEST_DATA_DIR / "fuzzy_matched_test_exp_results_df.parquet"
@@ -46,6 +52,12 @@ class TestDataFrameMatcher:
         return pl.read_parquet(fuzzy_matched_test_exp_results_daymaxed_df_path)
 
     @pytest.fixture
+    def fuzzy_matched_test_exp_results_blocked_df(self):
+        """Load the expected fuzzy match output from disk."""
+        fuzzy_matched_test_exp_results_blocked_df_path = TEST_DATA_DIR / "fuzzy_matched_test_exp_results_blocked_df.parquet"
+        return pl.read_parquet(fuzzy_matched_test_exp_results_blocked_df_path)
+
+    @pytest.fixture
     def fuzzy_unmatched_test_exp_results_df(self):
         """Load the expected fuzzy unmatch output from disk."""
         fuzzy_unmatched_test_exp_results_df_path = TEST_DATA_DIR / "fuzzy_unmatched_test_exp_results_df.parquet"
@@ -56,6 +68,12 @@ class TestDataFrameMatcher:
         """Load the expected fuzzy unmatch output from disk."""
         fuzzy_unmatched_test_exp_results_daymaxed_df_path = TEST_DATA_DIR / "fuzzy_unmatched_test_exp_results_daymaxed_df.parquet"
         return pl.read_parquet(fuzzy_unmatched_test_exp_results_daymaxed_df_path)
+
+    @pytest.fixture
+    def fuzzy_unmatched_test_exp_results_blocked_df(self):
+        """Load the expected fuzzy unmatch output from disk."""
+        fuzzy_unmatched_test_exp_results_blocked_df_path = TEST_DATA_DIR / "fuzzy_unmatched_test_exp_results_blocked_df.parquet"
+        return pl.read_parquet(fuzzy_unmatched_test_exp_results_blocked_df_path)
 
     @pytest.fixture
     def no_demo_test_exp_results_df(self):
@@ -147,3 +165,30 @@ class TestDataFrameMatcher:
         else:
             assert_frame_equal(output.fuzzy_matched, fuzzy_matched_test_exp_results_daymaxed_df)
             assert_frame_equal(output.fuzzy_unmatched, fuzzy_unmatched_test_exp_results_daymaxed_df)
+
+    def test_blocking(self,
+                      fuzzy_match_test_df,
+                      match_to_test_df,
+                      exact_matched_test_exp_results_blocked_df,
+                      fuzzy_matched_test_exp_results_blocked_df,
+                      fuzzy_unmatched_test_exp_results_blocked_df,
+                      no_demo_test_exp_results_df
+                      ):
+
+        matcher = DataFrameMatcher(
+            df_src=fuzzy_match_test_df,
+            df_ref=match_to_test_df,
+            first_name='FIRST_NAME',
+            last_name='LAST_NAME',
+            dob=('DOB', 'PATIENT_DOB'),
+            spec_col_date=('SEQUENCE_SPECIMEN_COLLECTION_DATE', 'SPECIMEN__COLLECTION__DTTM'),
+            key='submission_number',
+            block=('SEQUENCE_LAB', 'LAB')
+        )
+
+        output = matcher.match()
+
+        assert_frame_equal(output.exact_matched, exact_matched_test_exp_results_blocked_df)
+        assert_frame_equal(output.no_demo, no_demo_test_exp_results_df)
+        assert_frame_equal(output.fuzzy_matched, fuzzy_matched_test_exp_results_blocked_df)
+        assert_frame_equal(output.fuzzy_unmatched, fuzzy_unmatched_test_exp_results_blocked_df)

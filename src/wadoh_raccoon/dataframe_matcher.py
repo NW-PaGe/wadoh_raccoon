@@ -39,7 +39,7 @@ class DataFrameMatcher:
         If the names are different, they should be provided in a tuple containing the
         source name first, followed by the reference name.
     dob: str | tuple[str, str]
-        The birth date demographic column name in the source and reference dataframes.
+        The birthdate demographic column name in the source and reference dataframes.
         If the names are different, they should be provided in a tuple containing the
         source name first, followed by the reference name.
     spec_col_date: str | tuple[str, str]
@@ -159,10 +159,11 @@ class DataFrameMatcher:
         last_name: str | tuple[str, str],
         dob: str | tuple[str, str],
         spec_col_date: str | tuple[str, str],
+        block: str | tuple | list[str | tuple[str, str]] | None = None,
         key: str | list | None = None,
         threshold: int | float = 80,
         day_max: int | None = None,
-        business_day_max: int | None = None
+        business_day_max: int | None = None,
     ):
 
         # Source and reference data
@@ -186,6 +187,9 @@ class DataFrameMatcher:
             spec_col_date = (spec_col_date, spec_col_date)
         self.spec_col_date_src, self.spec_col_date_ref = spec_col_date
 
+        # blocking
+        self.block_left, self.block_right = self.__normalize_blocks(block)
+
         # submission key
         if key is None:
             self.key_isnone = True
@@ -203,6 +207,23 @@ class DataFrameMatcher:
         # day thresholds
         self.day_max = day_max
         self.business_day_max = business_day_max
+
+    @staticmethod
+    def __normalize_blocks(b):
+        if b is None:
+            return [], []
+        if not isinstance(b, list):
+            b = [b]
+        left = []
+        right = []
+        for col in b:
+            if isinstance(col, str):
+                left.append(col)
+                right.append(col)
+            else:
+                left.append(col[0])
+                right.append(col[1])
+        return left, right
 
     @staticmethod
     def __prep_df(df, first_name, last_name, spec_col_date, dob, output_spec_col_name, output_dob_name):
@@ -285,8 +306,8 @@ class DataFrameMatcher:
         potential_matches = (
             fuzzy_with_demo
             .join(ref_prep.with_columns(pl.lit(True).alias(indicator)),  # Add indicator column to determine join
-                left_on=['first_name_clean','last_name_clean','submitted_dob'],
-                right_on=['first_name_clean','last_name_clean','reference_dob'],
+                left_on=['first_name_clean','last_name_clean','submitted_dob'] + self.block_left,
+                right_on=['first_name_clean','last_name_clean','reference_dob'] + self.block_right,
                 how="left",
                 suffix="_em"
             )
@@ -324,9 +345,9 @@ class DataFrameMatcher:
             needs_fuzzy_match
             .join(
                 ref_prep,
-                left_on = 'submitted_dob',
-                right_on='reference_dob',
-                how = 'left'
+                left_on=['submitted_dob'] + self.block_left,
+                right_on=['reference_dob'] + self.block_right,
+                how='left'
             )
         )
 
