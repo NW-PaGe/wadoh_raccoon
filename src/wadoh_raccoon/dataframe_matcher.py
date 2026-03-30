@@ -442,71 +442,61 @@ class DataFrameMatcher:
 
         """
 
-        # ----- Init variables ----- #
-        fuzzy_matched = pl.LazyFrame()
-        fuzzy_unmatched = pl.LazyFrame()
-
         # ------- Fuzzy Matching ------- #
+        multiple_matches_ratios = (
+            self.score(dob_match)
+            # Get a date range calculation of days between submitted collection date and ref collection date
+            .with_columns(
+                day_count=
+                pl.col('reference_collection_date').sub(pl.col('submitted_collection_date')).dt.total_days().abs(),
+                business_day_count=
+                pl.business_day_count(start='submitted_collection_date', end='reference_collection_date').abs()
+            )
+        )
 
-        if helpers.lazy_height(dob_match) > 0:
-            multiple_matches_ratios = (
-                self.score(dob_match.lazy())
-                # Get a date range calculation of days between submitted collection date and ref collection date
-                .with_columns(
-                    day_count=
-                    pl.col('reference_collection_date').sub(pl.col('submitted_collection_date')).dt.total_days().abs(),
-                    business_day_count=
-                    pl.business_day_count(start='submitted_collection_date', end='reference_collection_date').abs()
-                )
+        # Get ones that matched on ratio >= threshold and pass day checks (if applicable)
+        multiple_matches_ratios_final = multiple_matches_ratios.filter(
+            pl.col('match_ratio').ge(self.threshold) | pl.col('reverse_match_ratio').ge(self.threshold)
+        )
+
+        if self.day_max:
+            multiple_matches_ratios_final = multiple_matches_ratios_final.filter(
+                pl.col('day_count').le(self.day_max)
             )
 
-            # Get ones that matched on ratio >= threshold and pass day checks (if applicable)
-            multiple_matches_ratios_final = multiple_matches_ratios.filter(
-                pl.col('match_ratio').ge(self.threshold) | pl.col('reverse_match_ratio').ge(self.threshold)
+        if self.business_day_max:
+            multiple_matches_ratios_final = multiple_matches_ratios_final.filter(
+                pl.col('business_day_count').le(self.business_day_max)
             )
 
-            if self.day_max:
-                multiple_matches_ratios_final = multiple_matches_ratios_final.filter(
-                    pl.col('day_count').le(self.day_max)
-                )
-
-            if self.business_day_max:
-                multiple_matches_ratios_final = multiple_matches_ratios_final.filter(
-                    pl.col('business_day_count').le(self.business_day_max)
-                )
-
-            # get the top matches of the groups with no score meeting the threshold
-            fuzzy_unmatched = (
-                multiple_matches_ratios
-                # Remove any groups that had a match >= the threshold
-                .join(multiple_matches_ratios_final, on=self.key, how='anti')
-                # Get the max between the two ratio methods
-                .with_columns(pl.max_horizontal('match_ratio', 'reverse_match_ratio').alias('max_ratio'))
-                # Select the match with the highest ratio within each group
-                .group_by(self.key)
-                .agg(
-                    pl.all()
-                    .sort_by(['max_ratio', 'business_day_count', 'day_count'], descending=[True, False, False], nulls_last=True)
-                    .first()
-                )
-                .drop('max_ratio', 'day_count', 'business_day_count')
+        # get the top matches of the groups with no score meeting the threshold
+        fuzzy_unmatched = (
+            multiple_matches_ratios
+            # Remove any groups that had a match >= the threshold
+            .join(multiple_matches_ratios_final, on=self.key, how='anti')
+            # Get the max between the two ratio methods
+            .with_columns(pl.max_horizontal('match_ratio', 'reverse_match_ratio').alias('max_ratio'))
+            # Select the match with the highest ratio within each group
+            .group_by(self.key)
+            .agg(
+                pl.all()
+                .sort_by(['max_ratio', 'business_day_count', 'day_count'], descending=[True, False, False], nulls_last=True)
+                .first()
             )
+            .drop('max_ratio', 'day_count', 'business_day_count')
+        )
 
-            # here we need to group by key and select row with the closest collection date difference
-            fuzzy_matched = (
-                multiple_matches_ratios_final
-                .group_by(self.key)
-                .agg(pl.all().sort_by(['business_day_count', 'day_count'], nulls_last=True).first())
-            )
+        # here we need to group by key and select row with the closest collection date difference
+        fuzzy_matched = (
+            multiple_matches_ratios_final
+            .group_by(self.key)
+            .agg(pl.all().sort_by(['business_day_count', 'day_count'], nulls_last=True).first())
+        )
 
-            if self.key_isnone:
-                fuzzy_matched = fuzzy_matched.drop(self.key)
-                fuzzy_unmatched = fuzzy_unmatched.drop(self.key)
-                
-        if isinstance(dob_match, pl.DataFrame):
-            fuzzy_matched = fuzzy_matched.collect()
-            fuzzy_unmatched = fuzzy_unmatched.collect()
-                
+        if self.key_isnone:
+            fuzzy_matched = fuzzy_matched.drop(self.key)
+            fuzzy_unmatched = fuzzy_unmatched.drop(self.key)
+
         return fuzzy_matched, fuzzy_unmatched
 
     def __output_summary(
