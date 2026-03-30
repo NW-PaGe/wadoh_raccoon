@@ -583,6 +583,11 @@ class DataFrameMatcher:
         fuzzy_matched, fuzzy_unmatched = self.fuzzy_match(dob_match)
         # print summary
         if verbose:
+            if self.key_isnone:
+                print(
+                    "Warning: No key specified. Checking data leaks against source schema. "
+                    "To skip data leak checks, set `verbose` to False"
+                )
             self.__output_summary(
                 fuzzy_matched_df=fuzzy_matched, 
                 fuzzy_unmatched_df=fuzzy_unmatched, 
