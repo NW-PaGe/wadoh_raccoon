@@ -515,18 +515,27 @@ class DataFrameMatcher:
                 fuzzy_without_demo_df,
                 exact_match_df
             ],
-            # diagnonal_relaxed means that it will concat even if col types are different
+            # diagonal_relaxed means that it will concat even if col types are different
             # it will convert the col types to be the same depending on the most frequent
             how = "diagonal_relaxed")
 
+        if self.key_isnone:
+            if isinstance(self.df_src, pl.DataFrame):
+                join_keys = self.df_src.columns
+            else:
+                join_keys = list(self.df_src.collect_schema().keys())
+            join_keys = [jk for jk in join_keys if jk not in self.key]  # remove created key
+        else:
+            join_keys = self.key
+
         # anti_join outputs to see if any data is missing from the outputs from the original df
         check_data_leaks = helpers.lazy_height(
-            submissions_to_fuzzy_df.join(all_outputs, on=self.key, how="anti")
+            submissions_to_fuzzy_df.join(all_outputs, on=join_keys, how="anti")
         )
 
         # try the opposite anti join
         check_data_leaks_reverse = helpers.lazy_height(
-            all_outputs.join(submissions_to_fuzzy_df, on=self.key, how="anti")
+            all_outputs.join(submissions_to_fuzzy_df, on=join_keys, how="anti")
         )
 
         # Output errors if any data leaks happen!
