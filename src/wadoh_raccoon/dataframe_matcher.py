@@ -46,6 +46,10 @@ class DataFrameMatcher:
         The specimen collection date column name in the source and reference dataframes.
         If the names are different, they should be provided in a tuple containing the
         source name first, followed by the reference name.
+    block: str | tuple[str, str] | list[str] | list[tuple[str, str]] (optional)
+        Additional field(s) to block on. Adding fields here will add join keys to demographic matching
+        joins. Fields can be specified the same was as the name, dob, and spec_col_date params. If blocking
+        on more than one additional field, use a list of strings and/or tuples. Defaults to None.
     key: str | list (optional)
         The key (or list of keys) which group to a distinct source record. Only one match can be
         returned per distinct key. If no key given, each row in the source df will be treated as
