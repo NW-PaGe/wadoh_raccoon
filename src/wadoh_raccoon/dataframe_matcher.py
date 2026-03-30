@@ -254,8 +254,7 @@ class DataFrameMatcher:
 
         return ref_prep, submissions_to_fuzzy_prep
 
-    @staticmethod
-    def filter_demo(submissions_to_fuzzy_prep) -> (pl.DataFrame | pl.LazyFrame, pl.DataFrame | pl.LazyFrame):
+    def filter_demo(self, submissions_to_fuzzy_prep) -> (pl.DataFrame | pl.LazyFrame, pl.DataFrame | pl.LazyFrame):
 
         # 2. Split by presence of demographics and specimen collection date
         fuzzy_with_demo = (
@@ -275,8 +274,11 @@ class DataFrameMatcher:
                     pl.col('submitted_dob').is_null())
         )
 
-        return fuzzy_with_demo, fuzzy_without_demo
+        # Drop key if created during matching
+        if self.key_isnone:
+            fuzzy_without_demo = fuzzy_without_demo.drop(self.key)
 
+        return fuzzy_with_demo, fuzzy_without_demo
 
     def find_exact_match(self, ref_prep, fuzzy_with_demo) -> (pl.DataFrame | pl.LazyFrame, pl.DataFrame | pl.LazyFrame):
 
