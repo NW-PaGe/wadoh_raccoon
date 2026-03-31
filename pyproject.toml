@@ -14,8 +14,9 @@ dependencies = [
     "great-tables>=0.17.0",
     "paramiko>=3.5.0",
     "polars>=1.18.0",
+    "pydantic>=2.10.6",
     "thefuzz>=0.22.1",
-    "xlsxwriter>=3.2.0"
+    "xlsxwriter>=3.2.0",
 ]
 
 [project.scripts]
