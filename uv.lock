@@ -2221,7 +2221,7 @@ wheels = [
 
 [[package]]
 name = "wadoh-raccoon"
-version = "0.4.0"
+version = "0.4.1"
 source = { editable = "." }
 dependencies = [
     { name = "azure-identity" },
@@ -2230,6 +2230,7 @@ dependencies = [
     { name = "great-tables" },
     { name = "paramiko" },
     { name = "polars" },
+    { name = "pydantic" },
     { name = "thefuzz" },
     { name = "xlsxwriter" },
 ]
@@ -2251,6 +2252,7 @@ requires-dist = [
     { name = "great-tables", specifier = ">=0.17.0" },
     { name = "paramiko", specifier = ">=3.5.0" },
     { name = "polars", specifier = ">=1.18.0" },
+    { name = "pydantic", specifier = ">=2.10.6" },
     { name = "thefuzz", specifier = ">=0.22.1" },
     { name = "xlsxwriter", specifier = ">=3.2.0" },
 ]
