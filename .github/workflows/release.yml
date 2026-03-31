@@ -1,6 +1,7 @@
 name: Build, Test, Changelog, and Release Python Package
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
