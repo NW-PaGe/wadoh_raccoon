@@ -7,7 +7,7 @@ metadata-files:
 
 
 quartodoc:
-  # the name used to import the package you want to create reference docs for 
+  # the name used to import the package you want to create reference docs for
   package: wadoh_raccoon
   options:
     include_private: true
