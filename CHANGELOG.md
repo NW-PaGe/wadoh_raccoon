@@ -1,3 +1,12 @@
+## [0.4.3](https://github.com/NW-PaGe/wadoh_raccoon/compare/v0.4.2...v0.4.3) (2026-03-31)
+
+
+### Bug Fixes
+
+* test fix cus gh actions are hilarious ([655af19](https://github.com/NW-PaGe/wadoh_raccoon/commit/655af19a9984ad4a55daa143a5a812731593d9c9))
+
+
+
 ## [0.4.2](https://github.com/NW-PaGe/wadoh_raccoon/compare/v0.4.1...v0.4.2) (2026-03-31)
 
 
@@ -50,16 +59,6 @@
 * init shig match tests ([f8d68d0](https://github.com/NW-PaGe/wadoh_raccoon/commit/f8d68d0da93c1ee9b2b9739f79cfbfd2f621ca16))
 * update enteric test_dataframe_matcher.py ([9dfd804](https://github.com/NW-PaGe/wadoh_raccoon/commit/9dfd804f00b942998cbf60ef9fcf2161bc8f7b9f))
 * update names, add clean_names and prep_df functions ([149223a](https://github.com/NW-PaGe/wadoh_raccoon/commit/149223a9ba2fd0e6c803a6e0a722c1de8d84f0c1))
-
-
-
-# [0.2.0](https://github.com/NW-PaGe/wadoh_raccoon/compare/v0.1.1...v0.2.0) (2025-04-24)
-
-
-### Features
-
-* add azure blob utility methods ([a4a3e49](https://github.com/NW-PaGe/wadoh_raccoon/commit/a4a3e4924c957e466eb6dafbcf1bf8c984622c1b))
-* function to retrieve az kv secrets ([3e3b414](https://github.com/NW-PaGe/wadoh_raccoon/commit/3e3b4147866bec40e0548061872b68fe308d6296))
 
 
 
