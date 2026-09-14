@@ -1,12 +1,181 @@
 import polars as pl
 import paramiko
 from io import BytesIO
-from datetime import datetime
 from datetime import date
 from great_tables import GT, md, style, loc, google_font
-from azure.identity import DefaultAzureCredential
-from azure.keyvault.secrets import SecretClient
+from datetime import date
+from pyspark.sql import functions as F
+from databricks.sdk import WorkspaceClient
+import base64
 
+ 
+def export_csv_to_volume(df, filename, volume_path):
+    """
+    Write a DataFrame to the ent_seq volume as a single named CSV, cleaning up metadata files.
+    
+    Usage
+    -----
+    To be used within databricks
+
+    Examples
+    --------
+
+    ```python
+    import polars as pl
+    from wadoh_raccoon.helpers import export_to_volume
+
+    df = pl.DataFrame({"x": 1, "b": 2})
+    export_csv_to_volume(df, "roster","/Volume/diqa/")
+    ```
+
+    """
+    tmp_path = f"{volume_path}/tmp"
+    final_path = f"{volume_path}/{filename}"
+ 
+    record_count = df.count()
+ 
+    if record_count > 0:
+        df.coalesce(1).write.mode("overwrite") \
+            .option("header", True) \
+            .option("nullValue", "") \
+            .csv(tmp_path)
+ 
+        files = WorkspaceClient.dbutils.fs.ls(tmp_path)
+        part_file = [f.path for f in files if f.name.startswith("part-")][0]
+        WorkspaceClient.dbutils.fs.mv(part_file, final_path)
+        WorkspaceClient.dbutils.fs.rm(tmp_path, recurse=True)
+ 
+        print(f"Written to {final_path} — {record_count} records")
+    else:
+        print(f"No records for today — {filename} not written")
+
+def convert_types_to_table(df, target_table: str, spark):
+    """
+    Casts columns in a Spark DataFrame to match the data types
+    of a Unity Catalog target table.
+
+    Usage
+    -----
+    To be run in databricks. Useful if you need to write to a table in unity catalog without worrying about type differences
+
+    Extra columns are ignored.
+    Missing columns are added as NULL with the target column type.
+    Output columns are ordered according to the target table schema.
+
+    Parameters
+    ----------
+    df: spark.DataFrame
+        A Spark dataframe
+    target_table: str
+        The name of the table in Unity Catalog you are writing to
+    
+    Returns
+    -------
+    df:
+        A Spark dataframe that matches the types (and columns) of the table you are writing to in Unity Catalog
+
+    Examples
+    --------
+    
+    ```python
+    from wadoh_raccoon.helpers import convert_types_to_table
+
+    df = spark.DataFrame({"x": 1, "b": 2})
+    new_df = convert_types_to_table(df, "tc_catalog.schema.table")
+    ```
+
+    And then you could write to Unity Catalog with 
+
+    ```python
+    from sparkpl import polars_to_spark
+    import polars as pl
+
+    df = pl.DataFrame({"x": 1, "b": 2})
+
+    received_submissions = convert_types_to_table(   # Convert the col types 
+        polars_to_spark(df),                         # Convert polars to spark
+        "tc_catalog.diqa.received_submissions"       # Match the types to Unity Catalog Table
+    )
+
+    received_submissions.write.mode("append").saveAsTable("tc_catalog.diqa.received_submissions") # write to unity catalog
+    ```
+
+    """
+
+    target_schema = spark.table(target_table).schema
+    
+
+    for field in target_schema:
+        if field.name in df.columns:
+            df = df.withColumn(
+                field.name,
+                F.col(field.name).cast(field.dataType)
+            )
+        else:
+            df = df.withColumn(
+                field.name,
+                F.lit(None).cast(field.dataType)
+            )
+
+    # Match target column order and drop any extra columns
+    df = df.select([field.name for field in target_schema])
+
+    return df
+
+def safe_append(
+    df,
+    full_table_name: str,
+    join_key: str
+):
+    """
+    Append a spark table to Unity Catalog without overwriting it. 
+    It will join new rows only based on a join key
+
+    Usage
+    -----
+    To be run in databricks. Useful if you need to write new rows to a table without overwriting existing ones
+
+    Parameters
+    ----------
+    df: spark.DataFrame
+        A Spark dataframe
+    full_table_name: str
+        The name of the table in Unity Catalog you are writing to
+    join_key: str
+        Name of the column to join on (usually submission_number)
+
+    Examples
+    --------
+    
+    ```python
+    from wadoh_raccoon.helpers import safe_append, convert_types_to_table
+    from sparkpl import polars_to_spark
+    import polars as pl
+
+    df = pl.DataFrame({"x": 1, "b": 2})
+
+    received_submissions = convert_types_to_table(   # Convert the col types 
+        polars_to_spark(df),                         # Convert polars to spark
+        "tc_catalog.diqa.received_submissions"       # Match the types to Unity Catalog Table
+    )
+
+    safe_append(
+        df=received_submissions,
+        full_table_name="tc_catalog.diqa.received_submissions",
+        join_key="submission_number"
+    )
+    ```
+
+    """
+    target = spark.table(full_table_name)
+
+    new_rows = df.join(
+        target.select(join_key),
+        on=join_key,
+        how="left_anti"
+    )
+
+    new_rows.write.mode("append").saveAsTable(full_table_name)
 
 def clean_name(col: str) -> pl.Expr:
     """
@@ -137,65 +306,78 @@ def date_format(df: pl.DataFrame | pl.LazyFrame,col: str):
             # if someone sends an excel date we'll just reject it and call the cops on them
         )
 
-def get_secrets(vault, keys):
-    """ Get secrets
+def get_secrets(keys, dbx_profile, dbx_scope, dbx_auth_type):
+    """ get secret
 
-    Retrieve secrets from Azure KeyVault.
-    This function will utilize the keys that are passed to retrieve the 
-    corresponding secrets.
-
-    **Note: Authenication takes place via DefaultAzureCredential which attempts
-    multiple authentication methods. One method is checking against Azure CLI 
-    if logged in.
-    
     Usage
     -----
-    Use this function to securely retrieve secret values from Azure KeyVault
-    using the specified key(s). The function accepts either a single key or
-    multiple keys as a list.
-    
+    To be used if you're running scripts on a local machine (not in the cloud).
+    It will pull secrets from databricks secret scopes, such as db connections and file paths.
+
     Parameters
     ----------
-    vault: str
-        Key vault url.
-    keys: str or list of str
-        A single secret key or list of secret keys.
+    keys: str
+        list of keys you want to get
+    dbx_profile: str
+        Run `databricks auth profiles` to find the name of this.
+    dbx_scope: str 
+        Run `databricks secrets list-scopes` to find the Scope name
+    dbx_auth_type: str
+        Usually `databricks-cli` if you're running this locally
 
-    
-    Returns
-    -------
-    str or tuple of str
-        If a single key is provided, returns the secret value as a string.
-        If a list of keys is provided, returns a tuple of secret values in the 
-        same order.
-    
     Examples
     --------
     ```python
-    from wadoh_raccoon.utils import helpers
+    from wadoh_raccoon.helpers import get_secrets
 
-    # Get a single secret
-    db_password = helpers.get_secrets("keyvault_url", "db-password")
-    
-    # Get multiple secrets at once
-    username, password, api_key = helpers.get_secrets(
-        "keyvault_url",
-        ["db-username", "db-password", "api-key"]
+    with open("config.yaml") as f:
+        config = yaml.load(f,Loader=yaml.SafeLoader)['default']
+        dbx_scope = config['dbx_scope']
+        dbx_profile = config['dbx_profile']
+        dbx_auth_type = config['dbx_auth_type']
+
+    keys = [
+        'wdrs-server', 
+        'wdrs-db', 
+        'wdrs-trusted', 
+        'wdrs-intent'
+    ]
+
+    # Get WDRS connection params from Az KV
+    wdrs_server, wdrs_db, wdrs_trusted, wdrs_intent = get_secrets(
+        keys=keys,
+        dbx_scope=dbx_scope,
+        dbx_profile=dbx_profile,
+        dbx_auth_type=dbx_auth_type
     )
+
+    # Establish connection to WDRS=
+    conn_wdrs = pyodbc.connect(
+        DRIVER='SQL Server Native Client 11.0',
+        SERVER=wdrs_server,
+        DATABASE=wdrs_db,
+        Trusted_Connection=wdrs_trusted,
+        ApplicationIntent=wdrs_intent
+    )
+
     ```
     """
-    # Init credential and client
-    credential = DefaultAzureCredential()
-    vault_url = vault
-    client = SecretClient(vault_url=vault_url, credential=credential)
-    
-    # Handle single string input
-    if isinstance(keys, str):
-        return client.get_secret(keys).value
-    
-    # Handle list input
-    return tuple(client.get_secret(key).value for key in keys)
 
+    w = WorkspaceClient(
+        profile=dbx_profile,
+        auth_type=dbx_auth_type,
+    )
+
+    def _get_one(key):
+        secret = w.secrets.get_secret(scope=dbx_scope, key=key)
+        return base64.b64decode(secret.value).decode("utf-8")
+
+    # Single key
+    if isinstance(keys, str):
+        return _get_one(keys)
+
+    # Multiple keys
+    return tuple(_get_one(key) for key in keys)
 
 def save_raw_values(df_inp: pl.DataFrame, primary_key_col: str):
     """ save raw values
