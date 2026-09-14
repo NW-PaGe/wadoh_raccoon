@@ -5,7 +5,6 @@ from datetime import date
 from great_tables import GT, md, style, loc, google_font
 from datetime import date
 from pyspark.sql import functions as F
-from databricks.sdk.runtime import spark
 from databricks.sdk import WorkspaceClient
 import base64
 
@@ -50,7 +49,7 @@ def export_csv_to_volume(df, filename, volume_path):
     else:
         print(f"No records for today — {filename} not written")
 
-def convert_types_to_table(df, target_table: str):
+def convert_types_to_table(df, target_table: str, spark):
     """
     Casts columns in a Spark DataFrame to match the data types
     of a Unity Catalog target table.
