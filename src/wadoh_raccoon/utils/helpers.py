@@ -6,7 +6,50 @@ from datetime import date
 from great_tables import GT, md, style, loc, google_font
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
+from datetime import date
+from pyspark.sql import functions as F
+from databricks.sdk import WorkspaceClient
 
+ 
+def export_csv_to_volume(df, filename, volume_path):
+    """
+    Write a DataFrame to the ent_seq volume as a single named CSV, cleaning up metadata files.
+    
+    Usage
+    -----
+    To be used within databricks
+
+    Examples
+    --------
+
+    ```python
+    import polars as pl
+    from wadoh_raccoon.helpers import export_to_volume
+
+    df = pl.DataFrame({"x": 1, "b": 2})
+    export_csv_to_volume(df, "roster","/Volume/diqa/")
+    ```
+
+    """
+    tmp_path = f"{volume_path}/tmp"
+    final_path = f"{volume_path}/{filename}"
+ 
+    record_count = df.count()
+ 
+    if record_count > 0:
+        df.coalesce(1).write.mode("overwrite") \
+            .option("header", True) \
+            .option("nullValue", "") \
+            .csv(tmp_path)
+ 
+        files = WorkspaceClient.dbutils.fs.ls(tmp_path)
+        part_file = [f.path for f in files if f.name.startswith("part-")][0]
+        WorkspaceClient.dbutils.fs.mv(part_file, final_path)
+        WorkspaceClient.dbutils.fs.rm(tmp_path, recurse=True)
+ 
+        print(f"Written to {final_path} — {record_count} records")
+    else:
+        print(f"No records for today — {filename} not written")
 
 def clean_name(col: str) -> pl.Expr:
     """
