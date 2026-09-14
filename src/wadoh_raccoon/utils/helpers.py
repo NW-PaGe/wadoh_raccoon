@@ -5,9 +5,8 @@ from datetime import date
 from great_tables import GT, md, style, loc, google_font
 from datetime import date
 from pyspark.sql import functions as F
-from pyspark import spark
+from databricks.sdk.runtime import spark
 from databricks.sdk import WorkspaceClient
-import yaml
 import base64
 
  
