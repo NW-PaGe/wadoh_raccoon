@@ -125,6 +125,61 @@ def convert_types_to_table(df, target_table: str):
 
     return df
 
+def safe_append(
+    df,
+    full_table_name: str,
+    join_key: str
+):
+    """
+    Append a spark table to Unity Catalog without overwriting it. 
+    It will join new rows only based on a join key
+
+    Usage
+    -----
+    To be run in databricks. Useful if you need to write new rows to a table without overwriting existing ones
+
+    Parameters
+    ----------
+    df: spark.DataFrame
+        A Spark dataframe
+    full_table_name: str
+        The name of the table in Unity Catalog you are writing to
+    join_key: str
+        Name of the column to join on (usually submission_number)
+
+    Examples
+    --------
+    
+    ```python
+    from wadoh_raccoon.helpers import safe_append, convert_types_to_table
+    from sparkpl import polars_to_spark
+    import polars as pl
+
+    df = pl.DataFrame({"x": 1, "b": 2})
+
+    received_submissions = convert_types_to_table(   # Convert the col types 
+        polars_to_spark(df),                         # Convert polars to spark
+        "tc_catalog.diqa.received_submissions"       # Match the types to Unity Catalog Table
+    )
+
+    safe_append(
+        df=received_submissions,
+        full_table_name="tc_catalog.diqa.received_submissions",
+        join_key="submission_number"
+    )
+    ```
+
+    """
+    target = spark.table(full_table_name)
+
+    new_rows = df.join(
+        target.select(join_key),
+        on=join_key,
+        how="left_anti"
+    )
+
+    new_rows.write.mode("append").saveAsTable(full_table_name)
+
 def clean_name(col: str) -> pl.Expr:
     """
     Clean name field by stripping non-alpha characters and converting to uppercase.
