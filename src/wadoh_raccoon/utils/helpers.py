@@ -1,15 +1,14 @@
 import polars as pl
 import paramiko
 from io import BytesIO
-from datetime import datetime
 from datetime import date
 from great_tables import GT, md, style, loc, google_font
-from azure.identity import DefaultAzureCredential
-from azure.keyvault.secrets import SecretClient
 from datetime import date
 from pyspark.sql import functions as F
 from pyspark import spark
 from databricks.sdk import WorkspaceClient
+import yaml
+import base64
 
  
 def export_csv_to_volume(df, filename, volume_path):
@@ -309,65 +308,78 @@ def date_format(df: pl.DataFrame | pl.LazyFrame,col: str):
             # if someone sends an excel date we'll just reject it and call the cops on them
         )
 
-def get_secrets(vault, keys):
-    """ Get secrets
+def get_secrets(keys, dbx_profile, dbx_scope, dbx_auth_type):
+    """ get secret
 
-    Retrieve secrets from Azure KeyVault.
-    This function will utilize the keys that are passed to retrieve the 
-    corresponding secrets.
-
-    **Note: Authenication takes place via DefaultAzureCredential which attempts
-    multiple authentication methods. One method is checking against Azure CLI 
-    if logged in.
-    
     Usage
     -----
-    Use this function to securely retrieve secret values from Azure KeyVault
-    using the specified key(s). The function accepts either a single key or
-    multiple keys as a list.
-    
+    To be used if you're running scripts on a local machine (not in the cloud).
+    It will pull secrets from databricks secret scopes, such as db connections and file paths.
+
     Parameters
     ----------
-    vault: str
-        Key vault url.
-    keys: str or list of str
-        A single secret key or list of secret keys.
+    keys: str
+        list of keys you want to get
+    dbx_profile: str
+        Run `databricks auth profiles` to find the name of this.
+    dbx_scope: str 
+        Run `databricks secrets list-scopes` to find the Scope name
+    dbx_auth_type: str
+        Usually `databricks-cli` if you're running this locally
 
-    
-    Returns
-    -------
-    str or tuple of str
-        If a single key is provided, returns the secret value as a string.
-        If a list of keys is provided, returns a tuple of secret values in the 
-        same order.
-    
     Examples
     --------
     ```python
-    from wadoh_raccoon.utils import helpers
+    from wadoh_raccoon.helpers import get_secrets
 
-    # Get a single secret
-    db_password = helpers.get_secrets("keyvault_url", "db-password")
-    
-    # Get multiple secrets at once
-    username, password, api_key = helpers.get_secrets(
-        "keyvault_url",
-        ["db-username", "db-password", "api-key"]
+    with open("config.yaml") as f:
+        config = yaml.load(f,Loader=yaml.SafeLoader)['default']
+        dbx_scope = config['dbx_scope']
+        dbx_profile = config['dbx_profile']
+        dbx_auth_type = config['dbx_auth_type']
+
+    keys = [
+        'wdrs-server', 
+        'wdrs-db', 
+        'wdrs-trusted', 
+        'wdrs-intent'
+    ]
+
+    # Get WDRS connection params from Az KV
+    wdrs_server, wdrs_db, wdrs_trusted, wdrs_intent = get_secrets(
+        keys=keys,
+        dbx_scope=dbx_scope,
+        dbx_profile=dbx_profile,
+        dbx_auth_type=dbx_auth_type
     )
+
+    # Establish connection to WDRS=
+    conn_wdrs = pyodbc.connect(
+        DRIVER='SQL Server Native Client 11.0',
+        SERVER=wdrs_server,
+        DATABASE=wdrs_db,
+        Trusted_Connection=wdrs_trusted,
+        ApplicationIntent=wdrs_intent
+    )
+
     ```
     """
-    # Init credential and client
-    credential = DefaultAzureCredential()
-    vault_url = vault
-    client = SecretClient(vault_url=vault_url, credential=credential)
-    
-    # Handle single string input
-    if isinstance(keys, str):
-        return client.get_secret(keys).value
-    
-    # Handle list input
-    return tuple(client.get_secret(key).value for key in keys)
 
+    w = WorkspaceClient(
+        profile=dbx_profile,
+        auth_type=dbx_auth_type,
+    )
+
+    def _get_one(key):
+        secret = w.secrets.get_secret(scope=dbx_scope, key=key)
+        return base64.b64decode(secret.value).decode("utf-8")
+
+    # Single key
+    if isinstance(keys, str):
+        return _get_one(keys)
+
+    # Multiple keys
+    return tuple(_get_one(key) for key in keys)
 
 def save_raw_values(df_inp: pl.DataFrame, primary_key_col: str):
     """ save raw values
