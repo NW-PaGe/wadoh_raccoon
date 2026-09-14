@@ -8,6 +8,7 @@ from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from datetime import date
 from pyspark.sql import functions as F
+from pyspark import spark
 from databricks.sdk import WorkspaceClient
 
  
@@ -50,6 +51,79 @@ def export_csv_to_volume(df, filename, volume_path):
         print(f"Written to {final_path} — {record_count} records")
     else:
         print(f"No records for today — {filename} not written")
+
+def convert_types_to_table(df, target_table: str):
+    """
+    Casts columns in a Spark DataFrame to match the data types
+    of a Unity Catalog target table.
+
+    Usage
+    -----
+    To be run in databricks. Useful if you need to write to a table in unity catalog without worrying about type differences
+
+    Extra columns are ignored.
+    Missing columns are added as NULL with the target column type.
+    Output columns are ordered according to the target table schema.
+
+    Parameters
+    ----------
+    df: spark.DataFrame
+        A Spark dataframe
+    target_table: str
+        The name of the table in Unity Catalog you are writing to
+    
+    Returns
+    -------
+    df:
+        A Spark dataframe that matches the types (and columns) of the table you are writing to in Unity Catalog
+
+    Examples
+    --------
+    
+    ```python
+    from wadoh_raccoon.helpers import convert_types_to_table
+
+    df = spark.DataFrame({"x": 1, "b": 2})
+    new_df = convert_types_to_table(df, "tc_catalog.schema.table")
+    ```
+
+    And then you could write to Unity Catalog with 
+
+    ```python
+    from sparkpl import polars_to_spark
+    import polars as pl
+
+    df = pl.DataFrame({"x": 1, "b": 2})
+
+    received_submissions = convert_types_to_table(   # Convert the col types 
+        polars_to_spark(df),                         # Convert polars to spark
+        "tc_catalog.diqa.received_submissions"       # Match the types to Unity Catalog Table
+    )
+
+    received_submissions.write.mode("append").saveAsTable("tc_catalog.diqa.received_submissions") # write to unity catalog
+    ```
+
+    """
+
+    target_schema = spark.table(target_table).schema
+    
+
+    for field in target_schema:
+        if field.name in df.columns:
+            df = df.withColumn(
+                field.name,
+                F.col(field.name).cast(field.dataType)
+            )
+        else:
+            df = df.withColumn(
+                field.name,
+                F.lit(None).cast(field.dataType)
+            )
+
+    # Match target column order and drop any extra columns
+    df = df.select([field.name for field in target_schema])
+
+    return df
 
 def clean_name(col: str) -> pl.Expr:
     """
